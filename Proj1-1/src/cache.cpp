@@ -1,7 +1,7 @@
 #include <cstdio>
-#include <cmath>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
+#include <cmath>
 #include "cache.h"
 
 void Cache::init(unsigned int block, unsigned int size, unsigned int assoc, unsigned int replacement, unsigned int write, char *trace) {
@@ -56,6 +56,7 @@ void Cache::input() {
 }
 
 void Cache::output() {
+	unsigned int i,j;
     //print head
     printf("  ===== Simulator configuration =====\n");
     printf("  L1_BLOCKSIZE:%22d\n", BLOCKSIZE);
@@ -69,9 +70,9 @@ void Cache::output() {
 
     //print body
     puts("===== L1 contents =====");
-    for(int i=0; i<SET; i++) {
+    for(i=0; i<SET; i++) {
         printf("set%4d:", i);
-        for(int j=0; j<ASSOC; j++) {
+        for(j=0; j<ASSOC; j++) {
             printf("%8x ",TAGS[i + (j*SET)]);
             printf( (WRITE_POLICY == 0 && DIRTY[i + (j*SET)] == 1) ? "D" : " " );
         }
@@ -106,7 +107,7 @@ void Cache::transAddress(unsigned int address) {
 void Cache::readFromAddress() {
     TAG_ADD = 0;
 
-    for( int i=0; i<ASSOC; i++) {
+    for(unsigned int i=0; i<ASSOC; i++) {
         int index = INDEX + (i * SET);
         if (TAGS[index] == TAG_LOC) {
             if (REPLACEMENT_POLICY)  //LFU
@@ -138,7 +139,7 @@ void Cache::readFromAddress() {
 }
 
 void Cache::writeToAddress() {
-    for( int i=0; i<ASSOC; i++) {
+    for(unsigned int i=0; i<ASSOC; i++) {
         int index = INDEX + (i*SET);
         if( TAGS[index] == TAG_LOC ) {
             if( WRITE_POLICY == 0 )
@@ -177,27 +178,32 @@ void Cache::writeToAddress() {
 }
 
 void Cache::HIT(int index) {
-    for( int i=0; i<ASSOC; i++)
+	unsigned int i;
+    for(i=0; i<ASSOC; i++)
         if( NUM_TAG[INDEX + (i*SET)] < NUM_TAG[index] )
             NUM_TAG[INDEX + (i*SET)] = (NUM_TAG[INDEX + (i*SET)]) + 1;
     NUM_TAG[index] = 0;
 }
 
 void Cache::LRU() {
-    for( int i=0, max=-1; i<ASSOC; i++)
+	int max=-1;
+	unsigned int i;
+    for(i=0; i<ASSOC; i++)
         if( NUM_TAG[INDEX + (i*SET)] > max ) {
             max = NUM_TAG[INDEX + (i*SET)];
             TAG_ADD = ( INDEX + (i*SET) );
         }
 
-    for( int i=0; i<ASSOC; i++)
+    for(i=0; i<ASSOC; i++)
         NUM_TAG[INDEX + (i*SET)] = (NUM_TAG[INDEX + (i*SET)]) + 1;
 
     NUM_TAG[TAG_ADD] = 0;
 }
 
 void Cache::LFU() {
-    for( int i=0, min=1<<24; i<ASSOC; i++)
+	int min=1<<24;
+	unsigned int i;
+    for(i=0; i<ASSOC; i++)
         if( NUM_TAG[INDEX + (i*SET)] < min ) {
             min = NUM_TAG[INDEX + (i*SET)];
             TAG_ADD = ( INDEX + (i*SET) );

@@ -1,17 +1,19 @@
-#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "cache.h"
 using namespace std;
 
 Cache cache;
 int main(int argc, char **argv) {
-
     if(argc<6) {
         printf("\nUsage: ./sim_cache [BLOCKSIZE] [L1_SIZE] [L1_ASSOC]"
         " [L1_REPLACEMENT_POLICY] [L1_WRITE_POLICY] [trace_file] > [output_file]\n");
         return 0;
     }
 
-    freopen(argv[6],"r",stdin);
+    if(!freopen(argv[6],"r",stdin))
+		return 0;
 
     unsigned int block = (unsigned)atoi(argv[1]);
     unsigned int size = (unsigned)atoi(argv[2]);
