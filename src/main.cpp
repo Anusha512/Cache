@@ -11,10 +11,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    //unsigned int tag = 0;
-
-
-    //check here for non-negative values
+    freopen(argv[6],"r",stdin);
 
     unsigned int block = (unsigned)atoi(argv[1]);
     unsigned int size = (unsigned)atoi(argv[2]);
@@ -23,7 +20,6 @@ int main(int argc, char **argv) {
     unsigned int write = (unsigned)atoi(argv[5]);
 
     char *trace = argv[6];
-    freopen(argv[6],"r",stdin);
     int i,len=(int)strlen(trace);
     for(i=len;i>=0;i--)
         if(trace[i]=='/')

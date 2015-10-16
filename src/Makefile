@@ -15,7 +15,7 @@ SIM_OBJ = $(SIM_SRC:.cpp=.o)
 # default rule
 
 all: sim_cache
-	@echo "my work is done here..."
+#	@echo "my work is done here..."
 
 
 # rule for making sim_cache
