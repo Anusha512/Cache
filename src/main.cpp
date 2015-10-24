@@ -10,7 +10,8 @@ int main(int argc, char **argv)
 {
     if(argc!=7)
     {
-        printf("\nUsage: ./sim_cache BLOCKSIZE L1_SIZE L1_ASSOC L1_REPLACEMENT_POLICY L1_WRITE_POLICY trace_file > output_file\n");
+        printf("\nUsage: ./sim_cache [BLOCKSIZE] [L1_SIZE] [L1_ASSOC] [L1_REPLACEMENT_POLICY]"
+                       " [L1_WRITE_POLICY] [trace_file] > [output_file]\n");
         return 0;
     }
 
