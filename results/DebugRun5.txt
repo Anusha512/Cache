@@ -4,7 +4,7 @@
   L1_ASSOC:                         4
   L1_REPLACEMENT_POLICY:            1
   L1_WRITE_POLICY:                  1
-  trace_file:  ../traces/go_trace.txt
+  trace_file:            go_trace.txt
   ===================================
 
 ===== L1 contents =====
