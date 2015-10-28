@@ -11,9 +11,11 @@ class Cache {
 public:
     unsigned int BLOCKSIZE, SIZE, ASSOC, REPLACEMENT_POLICY, WRITE_POLICY;
     char *TRACE_FILE;
+    unsigned int NUM_READ, NUM_READ_MISS, NUM_WRITE, NUM_WRITE_MISS, NUM_WRITEBACK, TOT_MEM_TRAFFIC;
+    double MISS_RATE, ACCESS_TIME;
 
 public:
-    Cache* nextLevel;
+    //Cache* nextLevel;
     unsigned int SET;
 
     unsigned int* c_tagArray;
@@ -22,17 +24,8 @@ public:
     int* LRUCounter;
     int* count_set;
 
-    unsigned int readCounter;
-    unsigned int readMissCounter;
-    unsigned int writeCounter;
-    unsigned int writeMissCounter;
-    unsigned int memoryAccessCounter;
-    unsigned int noOfWritebacks;
-
-    //bool readFromAddress(unsigned int add);
-    //bool writeToAddress(unsigned int add);
-
-    void input(unsigned int block,unsigned int size,unsigned int assoc,unsigned int replacement,unsigned int write,char *trace);
+    void init(unsigned int block,unsigned int size,unsigned int assoc,unsigned int replacement,unsigned int write,char *trace);
+    void input();
     void output(double miss,double access);
 
 };
@@ -42,5 +35,6 @@ int writeToAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAdd
 void LRUForHit(Cache* cache, unsigned int indexLocation, unsigned int tagLocation);
 void LRUForMiss(Cache* cache, unsigned int indexLocation, unsigned int* tagLocation);
 void LeastFrequentForMiss(Cache* cache, unsigned int indexLocation, unsigned int* tagLocation);
+void extractAddressParams(unsigned int addressInInt, Cache* cache, unsigned int* indexLocation, unsigned int* tagAddress);
 
 #endif //CACHE_CACHE_H

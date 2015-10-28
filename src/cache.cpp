@@ -2,9 +2,10 @@
 // Created by Shintaku on 10/26/15.
 //
 #include <cstdio>
+#include <cmath>
 #include "Cache.h"
 
-void Cache::input(unsigned int block, unsigned int size, unsigned int assoc, unsigned int replacement, unsigned int write, char *trace) {
+void Cache::init(unsigned int block, unsigned int size, unsigned int assoc, unsigned int replacement, unsigned int write, char *trace) {
     BLOCKSIZE = block;
     SIZE = size;
     ASSOC = assoc;
@@ -12,14 +13,35 @@ void Cache::input(unsigned int block, unsigned int size, unsigned int assoc, uns
     WRITE_POLICY = write;
     TRACE_FILE = trace;
     SET = (size/(block*assoc));
-    nextLevel = NULL;
-    readCounter = 0;
-    writeCounter = 0;
-    readMissCounter = 0;
-    writeMissCounter = 0;
-    memoryAccessCounter = 0;
-    noOfWritebacks = 0;
+    //nextLevel = NULL;
+    NUM_READ = 0;
+    NUM_READ_MISS = 0;
+    NUM_WRITE = 0;
+    NUM_WRITE_MISS = 0;
+    TOT_MEM_TRAFFIC = 0;
+    NUM_WRITEBACK = 0;
 
+}
+
+void Cache::input() {
+    char rw[2];
+    unsigned int address;
+    unsigned int indexLocation = 0, tagAddress = 0;
+    while(scanf("%s %x",rw,&address)!=EOF)
+    {
+        extractAddressParams(address, this, &indexLocation, &tagAddress);
+
+        if( rw[0] == 'r' || rw[0] == 'R')
+        {
+            NUM_READ +=1;
+            readFromAddress(this, indexLocation, tagAddress);
+        }
+        else if( rw[0] == 'w' || rw[0] == 'W')
+        {
+            NUM_WRITE +=1;
+            writeToAddress(this, indexLocation, tagAddress);
+        }
+    }
 }
 
 void Cache::output(double miss,double access) {
@@ -50,13 +72,13 @@ void Cache::output(double miss,double access) {
     puts("");
     //print tail
     printf("  ====== Simulation results (raw) ======\n");
-    printf("  a. number of L1 reads:%16d\n", readCounter);
-    printf("  b. number of L1 read misses:%10d\n", readMissCounter);
-    printf("  c. number of L1 writes:%15d\n", writeCounter);
-    printf("  d. number of L1 write misses:%9d\n", writeMissCounter);
+    printf("  a. number of L1 reads:%16d\n", NUM_READ);
+    printf("  b. number of L1 read misses:%10d\n", NUM_READ_MISS);
+    printf("  c. number of L1 writes:%15d\n", NUM_WRITE);
+    printf("  d. number of L1 write misses:%9d\n", NUM_WRITE_MISS);
     printf("  e. L1 miss rate:%22.4f\n", miss);
-    printf("  f. number of writebacks from L1:%6d\n", noOfWritebacks);
-    printf("  g. total memory traffic:%14d\n", memoryAccessCounter);
+    printf("  f. number of writebacks from L1:%6d\n", NUM_WRITEBACK);
+    printf("  g. total memory traffic:%14d\n", TOT_MEM_TRAFFIC);
     puts("");
     printf("  ==== Simulation results (performance) ====\n");
     printf("  1. average access time:%15.4f ns", access);
@@ -92,8 +114,8 @@ int readFromAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAd
     {
         //It's a Cache Miss
         //printf("\nL1 MISS");
-        cache->readMissCounter += 1;
-        cache->memoryAccessCounter += 1;		//increase the memory traffic counter
+        cache->NUM_READ_MISS += 1;
+        cache->TOT_MEM_TRAFFIC += 1;		//increase the memory traffic counter
         LRUForMiss(cache, indexLocation, &tagLocation);
         cache->c_tagArray[tagLocation] = tagAddress;
     }
@@ -101,9 +123,9 @@ int readFromAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAd
     {
         //It's a Cache Miss, LFU Policy
         //printf("\nL1 MISS");
-        cache->readMissCounter += 1;
-        cache->memoryAccessCounter += 1;
-        //cache->noOfWritebacks += 1;
+        cache->NUM_READ_MISS += 1;
+        cache->TOT_MEM_TRAFFIC += 1;
+        //cache->NUM_WRITEBACK += 1;
         LeastFrequentForMiss(cache, indexLocation, &tagLocation);
         cache->c_tagArray[tagLocation] = tagAddress;
         cache->LRUCounter[tagLocation] = cache->count_set[indexLocation] + 1;
@@ -113,8 +135,8 @@ int readFromAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAd
     {
         if( cache->dirty_bit[tagLocation] == 1 )
         {
-            cache->memoryAccessCounter += 1;
-            cache->noOfWritebacks += 1;
+            cache->TOT_MEM_TRAFFIC += 1;
+            cache->NUM_WRITEBACK += 1;
             cache->dirty_bit[tagLocation] = 0;
         }
     }
@@ -149,7 +171,7 @@ int writeToAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAdd
                 }
                 else if( cache->WRITE_POLICY == 1 )
                 {
-                    cache->memoryAccessCounter += 1;
+                    cache->TOT_MEM_TRAFFIC += 1;
                 }
 
                 if(cache->REPLACEMENT_POLICY == 0 )	//LRU Policy
@@ -170,8 +192,8 @@ int writeToAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAdd
     //Cache Miss
     for( i=0; i< (int)cache->ASSOC; )
     {
-        cache->writeMissCounter += 1; 	// increase write miss counter
-        cache->memoryAccessCounter += 1;		//increase the memory traffic counter
+        cache->NUM_WRITE_MISS += 1; 	// increase write miss counter
+        cache->TOT_MEM_TRAFFIC += 1;		//increase the memory traffic counter
 
         if( cache->WRITE_POLICY == 0 )
         {
@@ -189,18 +211,14 @@ int writeToAddress(Cache* cache, unsigned int indexLocation, unsigned int tagAdd
 
             if( (int)cache->dirty_bit[tagLocation] == 1 )
             {
-                cache->memoryAccessCounter += 1;
-                cache->noOfWritebacks += 1;
+                cache->TOT_MEM_TRAFFIC += 1;
+                cache->NUM_WRITEBACK += 1;
             }
 
             cache->dirty_bit[tagLocation] = 1;
             cache->c_tagArray[tagLocation] = tagAddress;
 
         }
-        //else
-        //{
-        //		printf("\nL1 MISS, WRITE THROUGH");
-        //	}
         return(0);
     }
 
@@ -273,4 +291,22 @@ void LeastFrequentForMiss(Cache* cache, unsigned int indexLocation, unsigned int
 
     //*tagLocation gives the location of block which is selected to be evicted
     cache->count_set[indexLocation] = cache->LRUCounter[*tagLocation];
+}
+
+void extractAddressParams(unsigned int addressInInt, Cache* cache, unsigned int* indexLocation, unsigned int* tagAddress)
+{
+    int noOfBlockBits = 0, noOfIndexBits = 0, tempIndexNo = 0, i=0;
+
+    noOfBlockBits = (int)log2(cache->BLOCKSIZE);
+    noOfIndexBits = (int)log2(cache->SET);
+
+    *indexLocation = addressInInt>>noOfBlockBits;
+
+    for( i=0; i<noOfIndexBits; i++)
+    {
+        tempIndexNo = ( 1 | tempIndexNo<<1 );
+    }
+
+    *indexLocation = ( *indexLocation & tempIndexNo );
+    *tagAddress = addressInInt>>(noOfBlockBits + noOfIndexBits);
 }
