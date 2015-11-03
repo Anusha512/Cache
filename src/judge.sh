@@ -1,3 +1,4 @@
+#!/bin/bash
 function run_tests()
 {
     echo "Running..."
@@ -51,6 +52,6 @@ mkdir -p ../results
 
 run_tests
 diff_tests
-echo "All works' done."
+echo "All done."
 exit 0
 
