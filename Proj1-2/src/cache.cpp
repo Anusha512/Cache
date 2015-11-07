@@ -4,12 +4,11 @@
 #include <cmath>
 #include "cache.h"
 
-void Cache::init(unsigned int block, unsigned int size, unsigned int assoc) {
-    BLOCKSIZE = block;
+void Cache::init(unsigned int size, unsigned int assoc, unsigned int set, unsigned int tag) {
     SIZE = size;
     ASSOC = assoc;
-    SET = (SIZE/(BLOCKSIZE*ASSOC));
-    TAG = SET*ASSOC;
+    SET = set;
+    TAG = tag;
     
     TAGS = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
     DIRTY = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
@@ -21,18 +20,29 @@ void Cache::init(unsigned int block, unsigned int size, unsigned int assoc) {
     memset( VALID, 0, (sizeof(VALID[0])*TAG) );
     memset( LRUCounter, 0, (sizeof(LRUCounter[0])*TAG) );
 
-
     NUM_READ = 0;
     NUM_WRITE = 0;
     NUM_READ_MISS = 0;
     NUM_WRITE_MISS = 0;
     NUM_ACCESS = 0;
     NUM_WRITEBACK = 0;
+    MISS_RATE =0;
+    MISS_PENALTY = 0;
+    HIT_TIME = 0;
+    ACCESS_TIME = 0;
     nextLevel = NULL;
 }
 
-void CACHE::init() {
-
+void CACHE::init(unsigned int block, unsigned int size1, unsigned int assoc1, unsigned int sizev, unsigned int size2, unsigned int assoc2, char *trace) {
+    TRACE_FILE=trace;
+    BLOCKSIZE=block;
+    L1.init(size1, assoc1, size1/(block*assoc1), size1/block);
+    if( size2 > 0 ){
+        L1.nextLevel = &L2;
+        L2.init(size2, assoc2, size2/(block*assoc2), size2/block);
+    }
+    if( sizev > 0 )
+        Victim.init(sizev, sizev/block, 1, sizev/block);
 }
 
 void CACHE::input() {
@@ -41,18 +51,16 @@ void CACHE::input() {
     while( scanf(" %c %x",&rw,&address)!=EOF )
     {
         if( rw == 'r' || rw == 'R')
-            readFromAddress(L1, address, Victim, Victim.SIZE);
+            readFromAddress(L1, address, Victim.SIZE);
         else if( rw == 'w' || rw == 'W')
-            writeToAddress(L1, address, Victim, Victim.SIZE);
+            writeToAddress(L1, address, Victim.SIZE);
     }
 }
 
 void CACHE::output() {
     int i,j,k;
-    double missRateL1 = 0, accessTimeL1 = 0, missPenaltyL1 = 0, cacheHitTimeL1 = 0;
-    double missRateL2 = 0, accessTimeL2 = 0, missPenaltyL2 = 0, cacheHitTimeL2 = 0;
     printf("===== Simulator configuration =====\n");
-    printf("%-30s%-d\n", "BLOCKSIZE:", L1.BLOCKSIZE);
+    printf("%-30s%-d\n", "BLOCKSIZE:", BLOCKSIZE);
     printf("%-30s%-d\n", "L1_SIZE:", L1.SIZE);
     printf("%-30s%-d\n", "L1_ASSOC:", L1.ASSOC);
     printf("%-30s%-d\n", "Victim_Cache_SIZE:", Victim.SIZE);
@@ -72,7 +80,7 @@ void CACHE::output() {
             dirtyKey = L1.DIRTY[i + (j*L1.SET)];
             k = j-1;
 
-            while( ((int)k>=0) && ( key < ( L1.LRUCounter[i + (k*L1.SET)] ) ) )
+            while( (k>=0) && ( key < ( L1.LRUCounter[i + (k*L1.SET)] ) ) )
             {
                 L1.LRUCounter[i + ((k+1)*L1.SET)] = L1.LRUCounter[i + (k*L1.SET)];
                 L1.TAGS[i + ((k+1)*L1.SET)] = L1.TAGS[i + (k*L1.SET)];
@@ -113,7 +121,7 @@ void CACHE::output() {
             dirtyKey = Victim.DIRTY[i];
             j = i-1;
 
-            while( ((int)j>=0) && (key<Victim.LRUCounter[j]) )
+            while( ((j>=0) && (key<Victim.LRUCounter[j]) ))
             {
                 Victim.LRUCounter[j+1] = Victim.LRUCounter[j];
                 Victim.TAGS[j+1] = Victim.TAGS[j];
@@ -158,11 +166,11 @@ void CACHE::output() {
                 dirtyKey = L2.DIRTY[i + (j*L2.SET)];
                 k = j-1;
 
-                while( ((int)k>=0) && ( key < ( L2.LRUCounter[i + (k*L2.SET)] ) ) )
+                while( (k>=0) && ( key < ( L2.LRUCounter[i + (k*L2.SET)] ) ) )
                 {
                     L2.LRUCounter[i + ((k+1)*L2.SET)] = L2.LRUCounter[i + (k*L2.SET)];
                     L2.TAGS[i + ((k+1)*L2.SET)] = L2.TAGS[i + (k*L2.SET)];
-                    L2.DIRTY[i + ((k+1)*L2.SET)] = L2.DIRTY[i + (k*L2.SET)];;
+                    L2.DIRTY[i + ((k+1)*L2.SET)] = L2.DIRTY[i + (k*L2.SET)];
 
                     k = k-1;
                 }
@@ -188,13 +196,13 @@ void CACHE::output() {
 
 
     //L1 calculation
-    missRateL1 = ( (double)( (int)L1.NUM_READ_MISS + (int)L1.NUM_WRITE_MISS )/(double)( (int)L1.NUM_READ + (int)L1.NUM_WRITE ) );
-    missPenaltyL1 = (double)(20 + 0.5*( ((double)L1.BLOCKSIZE/16) ) );
+    L1.MISS_RATE = ( (double)( (int)L1.NUM_READ_MISS + (int)L1.NUM_WRITE_MISS )/(double)( (int)L1.NUM_READ + (int)L1.NUM_WRITE ) );
+    L1.MISS_PENALTY = (20 + 0.5*( ((double)BLOCKSIZE/16) ) );
 
 
 
-    cacheHitTimeL1 = (double)( 0.25 + 2.5*( (double)L1.SIZE/(512*1024) ) + 0.025*( (double)L1.BLOCKSIZE/16 ) + 0.025*( (double)L1.ASSOC ) );
-    accessTimeL1 = (double)( (double)cacheHitTimeL1 + ( (double)missRateL1*(double)missPenaltyL1 ) );
+    L1.HIT_TIME = ( 0.25 + 2.5*( (double)L1.SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)L1.ASSOC ) );
+    L1.ACCESS_TIME = ( L1.HIT_TIME + ( L1.MISS_RATE*L1.MISS_PENALTY ) );
 
 
     printf("====== Simulation results (raw) ======\n");
@@ -202,7 +210,7 @@ void CACHE::output() {
     printf("%-38s%-6d\n", "b. number of L1 read misses:", L1.NUM_READ_MISS);
     printf("%-38s%-6d\n", "c. number of L1 writes:", L1.NUM_WRITE);
     printf("%-38s%-6d\n", "d. number of L1 write misses:", L1.NUM_WRITE_MISS);
-    printf("%-38s%-2.4f\n", "e. L1 miss rate:", missRateL1);
+    printf("%-38s%-2.4f\n", "e. L1 miss rate:", L1.MISS_RATE);
 
 
     //Victim cache results
@@ -210,12 +218,12 @@ void CACHE::output() {
     printf("%-38s%-6d\n", "g. number of victim cache writeback:", Victim.NUM_WRITEBACK);
 
     //L2 cache calculation
-    missRateL2 = ( (double)( (int)L2.NUM_READ_MISS )/(double)( (int)L2.NUM_READ ) );
-    missPenaltyL2 = (double)(20 + 0.5*( ((double)L2.BLOCKSIZE/16) ) );
+    L2.MISS_RATE = ( (double)( (int)L2.NUM_READ_MISS )/(double)( (int)L2.NUM_READ ) );
+    L2.MISS_PENALTY = (20 + 0.5*( ((double)BLOCKSIZE/16) ) );
 
 
 
-    cacheHitTimeL2 = (double)( 2.5 + 2.5*( (double)L2.SIZE/(512*1024) ) + 0.025*( (double)L2.BLOCKSIZE/16 ) + 0.025*( (double)L2.ASSOC ) );
+    L2.HIT_TIME = ( 2.5 + 2.5*( (double)L2.SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)L2.ASSOC ) );
 
     printf("%-38s%-6d\n", "h. number of L2 reads:", L2.NUM_READ);
     printf("%-38s%-6d\n", "i. number of L2 read misses:", L2.NUM_READ_MISS);
@@ -224,7 +232,7 @@ void CACHE::output() {
     if( L2.SIZE == 0 )
         printf("%-38s%-6c\n", "l. L2 miss rate:", '0');
     else
-        printf("%-38s%-2.4f\n", "l. L2 miss rate:", missRateL2);
+        printf("%-38s%-2.4f\n", "l. L2 miss rate:", L2.MISS_RATE);
     printf("%-38s%-6d\n", "m. number of L2 writebacks:", L2.NUM_WRITEBACK);
 
     if(L2.SIZE == 0)
@@ -235,24 +243,24 @@ void CACHE::output() {
 
     if(L2.SIZE != 0)
     {
-        accessTimeL2 = ( cacheHitTimeL1 + ( (double)missRateL1*( cacheHitTimeL2 + ( (double)missRateL2*(double)missPenaltyL2 ) ) ) );
+        L2.ACCESS_TIME = ( L1.HIT_TIME + ( L1.MISS_RATE*( L2.HIT_TIME + ( L2.MISS_RATE*L2.MISS_PENALTY ) ) ) );
     }
 
     printf("==== Simulation results (performance) ====\n");
 
     if(L2.SIZE != 0)
     {
-        printf("1. average access time:%15.4f ns\n", accessTimeL2);  //========================================AAt calculate
+        printf("1. average access time:%15.4f ns\n", L2.ACCESS_TIME);  //========================================AAt calculate
     }
     else
-        printf("1. average access time:%15.4f ns\n", accessTimeL1);
+        printf("1. average access time:%15.4f ns\n", L1.ACCESS_TIME);
 }
 
-void extractAddressParams(unsigned int addressInInt, Cache cache_ds, unsigned int* indexLocation, unsigned int* tagAddress)
+void CACHE::extractAddressParams(unsigned int addressInInt, Cache cache_ds, unsigned int* indexLocation, unsigned int* tagAddress)
 {
     int noOfBlockBits = 0, noOfIndexBits = 0, tempIndexNo = 0, i=0;
 
-    noOfBlockBits = (int)log2(cache_ds.BLOCKSIZE);
+    noOfBlockBits = (int)log2(BLOCKSIZE);
     noOfIndexBits = (int)log2(cache_ds.SET);
 
     *indexLocation = addressInInt>>noOfBlockBits;
@@ -272,12 +280,12 @@ void extractAddressParams(unsigned int addressInInt, Cache cache_ds, unsigned in
 
 //Recursive solution
 
-int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCache, unsigned int vc_size)
+int CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size)
 {
     int i=0, foundInvalidEntry = 0, noOfBlockBits = 0, noOfIndexBits = 0;
     unsigned int tagLocation = 0, indexLocation = 0, tagAddress = 0, tempAdd=0, temptagLocation = 0;
 
-    noOfBlockBits = (int)log2(cache_ds.BLOCKSIZE);
+    noOfBlockBits = (int)log2(BLOCKSIZE);
     noOfIndexBits = (int)log2(cache_ds.SET);
 
 
@@ -317,7 +325,7 @@ int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCac
 
         if( cache_ds.nextLevel!=NULL )
         {
-            readFromAddress(*cache_ds.nextLevel, addressInInt, victimCache, 0);
+            readFromAddress(*cache_ds.nextLevel, addressInInt, 0);
         }
 
         cache_ds.NUM_ACCESS += 1;		//increase the memory traffic counter
@@ -336,7 +344,7 @@ int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCac
         LRUForMiss(cache_ds, indexLocation, &tagLocation);
         cache_ds.LRUCounter[tagLocation] = 0;
 
-        readFromVictimCache(victimCache, addressInInt, cache_ds, tagLocation, 'r');
+        readFromVictimCache(addressInInt, cache_ds, tagLocation, 'r');
 
         return(0);
     }
@@ -356,7 +364,7 @@ int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCac
         {
             tempAdd = cache_ds.TAGS[tagLocation];
             tempAdd = ( ( (tempAdd<<noOfIndexBits)|(tagLocation%cache_ds.SET) )<<noOfBlockBits );
-            writeToAddress(*cache_ds.nextLevel, tempAdd, victimCache, 0);
+            writeToAddress(*cache_ds.nextLevel, tempAdd, 0);
         }
         cache_ds.NUM_WRITEBACK += 1;
         cache_ds.DIRTY[tagLocation] = 0;
@@ -365,7 +373,7 @@ int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCac
 
     if( cache_ds.nextLevel!=NULL )
     {
-        readFromAddress(*cache_ds.nextLevel, addressInInt, victimCache, 0);
+        readFromAddress(*cache_ds.nextLevel, addressInInt, 0);
     }
 
     cache_ds.TAGS[tagLocation] = tagAddress;
@@ -376,35 +384,35 @@ int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCac
 
 
 
-int readFromVictimCache(Cache &victimCache, unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw)
+int CACHE::readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw)
 {
     int noOfBlockBits = 0, noOfIndexBitsCache = 0, i=0;
     unsigned int tagAddress = 0, indexLocOfCache = 0, vcTagLocation = 0;
     unsigned int tagAddressOfCache, tempTagAddress, constructedAddress = 0;
 
-    noOfBlockBits = (int)log2(victimCache.BLOCKSIZE);
+    noOfBlockBits = (int)log2(BLOCKSIZE);
     tagAddress = addressInInt>>noOfBlockBits;
 
     noOfIndexBitsCache = (int)log2(cache_ds.SET);
 
     extractAddressParams(addressInInt, cache_ds, &indexLocOfCache, &tagAddressOfCache);
 
-    for( i=0; i< (int)victimCache.ASSOC; i++)
+    for( i=0; i< (int)Victim.ASSOC; i++)
     {
-        if( victimCache.TAGS[i] == tagAddress )	//Checking Tag Entries
+        if( Victim.TAGS[i] == tagAddress )	//Checking Tag Entries
         {
-            if( victimCache.VALID[i] != 0 )
+            if( Victim.VALID[i] != 0 )
             {
 
                 tempTagAddress = cache_ds.TAGS[tagLocationCache];
                 cache_ds.TAGS[tagLocationCache] = tagAddressOfCache;
-                victimCache.TAGS[i] = ( (tempTagAddress<<noOfIndexBitsCache)|(indexLocOfCache%cache_ds.SET) );
+                Victim.TAGS[i] = ( (tempTagAddress<<noOfIndexBitsCache)|(indexLocOfCache%cache_ds.SET) );
 
                 tempTagAddress =  cache_ds.DIRTY[tagLocationCache];
-                cache_ds.DIRTY[tagLocationCache] = victimCache.DIRTY[i];
-                victimCache.DIRTY[i] = tempTagAddress;
-                LRUForHitVC(victimCache, i);
-                victimCache.NUM_SWAP ++;
+                cache_ds.DIRTY[tagLocationCache] = Victim.DIRTY[i];
+                Victim.DIRTY[i] = tempTagAddress;
+                LRUForHitVC(Victim, i);
+                Victim.NUM_SWAP ++;
                 if( rw == 'w' )
                     cache_ds.DIRTY[tagLocationCache] = 1;
                 return(0);
@@ -423,34 +431,34 @@ int readFromVictimCache(Cache &victimCache, unsigned int addressInInt, Cache &ca
     cache_ds.NUM_ACCESS += 1;
 
 
-    LRUForMissVC(victimCache, &vcTagLocation);
-    if( (int)victimCache.DIRTY[vcTagLocation] == 1)
+    LRUForMissVC(Victim, &vcTagLocation);
+    if( (int)Victim.DIRTY[vcTagLocation] == 1)
     {
         //printf("\nVICTIM CACHE WRITE BACK");
 
         if( cache_ds.nextLevel!=NULL )
         {
-            constructedAddress = victimCache.TAGS[vcTagLocation]<<noOfBlockBits;
-            writeToAddress(*cache_ds.nextLevel, constructedAddress, victimCache, 0);
+            constructedAddress = Victim.TAGS[vcTagLocation]<<noOfBlockBits;
+            writeToAddress(*cache_ds.nextLevel, constructedAddress, 0);
 
         }
-        victimCache.NUM_WRITEBACK ++;
+        Victim.NUM_WRITEBACK ++;
         cache_ds.NUM_ACCESS += 1;
     }
 
 
     if( cache_ds.nextLevel!=NULL )
     {
-        readFromAddress(*cache_ds.nextLevel, addressInInt, victimCache, 0);
+        readFromAddress(*cache_ds.nextLevel, addressInInt, 0);
     }
 
     tempTagAddress = cache_ds.TAGS[tagLocationCache];
-    victimCache.TAGS[vcTagLocation] = ( (tempTagAddress<<noOfIndexBitsCache)|(indexLocOfCache%cache_ds.SET) );
+    Victim.TAGS[vcTagLocation] = ( (tempTagAddress<<noOfIndexBitsCache)|(indexLocOfCache%cache_ds.SET) );
 
     tempTagAddress =  cache_ds.DIRTY[tagLocationCache];
-    victimCache.DIRTY[vcTagLocation] = tempTagAddress;
+    Victim.DIRTY[vcTagLocation] = tempTagAddress;
 
-    victimCache.VALID[vcTagLocation] = 1;
+    Victim.VALID[vcTagLocation] = 1;
     cache_ds.TAGS[tagLocationCache] = tagAddressOfCache;
 
     if( rw == 'r' )
@@ -467,7 +475,7 @@ int readFromVictimCache(Cache &victimCache, unsigned int addressInInt, Cache &ca
 
 //Recursive solution
 
-int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCache, unsigned int vc_size)
+int CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size)
 {
 
     int i=0, foundInvalidEntry = 0;
@@ -475,7 +483,7 @@ int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCach
 
     int noOfBlockBits = 0, noOfIndexBits = 0;
 
-    noOfBlockBits = (int)log2(cache_ds.BLOCKSIZE);
+    noOfBlockBits = (int)log2(BLOCKSIZE);
     noOfIndexBits = (int)log2(cache_ds.SET);
 
     cache_ds.NUM_WRITE += 1;
@@ -516,7 +524,7 @@ int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCach
 
         if( cache_ds.nextLevel!=NULL )
         {
-            readFromAddress(*cache_ds.nextLevel, addressInInt, victimCache, 0);
+            readFromAddress(*cache_ds.nextLevel, addressInInt, 0);
         }
         cache_ds.NUM_ACCESS += 1;		//increase the memory traffic counter
         cache_ds.TAGS[tagLocation] = tagAddress;
@@ -533,7 +541,7 @@ int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCach
         LRUForMiss(cache_ds, indexLocation, &tagLocation);
         cache_ds.LRUCounter[tagLocation] = 0;
 
-        readFromVictimCache(victimCache, addressInInt, cache_ds, tagLocation, 'w');
+        readFromVictimCache(addressInInt, cache_ds, tagLocation, 'w');
 
         return(0);
     }
@@ -551,7 +559,7 @@ int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCach
         {
             tempAdd = cache_ds.TAGS[tagLocation];
             tempAdd = ( ( (tempAdd<<noOfIndexBits)|(tagLocation%cache_ds.SET) )<<noOfBlockBits );
-            writeToAddress(*cache_ds.nextLevel, tempAdd, victimCache, 0);
+            writeToAddress(*cache_ds.nextLevel, tempAdd, 0);
         }
         cache_ds.NUM_WRITEBACK += 1;
 
@@ -560,7 +568,7 @@ int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCach
 
     if( cache_ds.nextLevel!=NULL )
     {
-        readFromAddress(*cache_ds.nextLevel, addressInInt, victimCache, 0);
+        readFromAddress(*cache_ds.nextLevel, addressInInt, 0);
     }
 
     cache_ds.DIRTY[tagLocation] = 1;
