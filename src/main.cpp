@@ -28,8 +28,6 @@ int main(int argc, char **argv) {
 
     cache.init(block, size, assoc, replacement, write, trace);
     cache.input();
-    cache.getMissRate();
-    cache.getAccessTime();
     cache.output();
     return 0;
 }

@@ -65,6 +65,10 @@ void Cache::input() {
             writeToAddress();
         }
     }
+    MISS_RATE = ( (double)(NUM_READ_MISS + NUM_WRITE_MISS )/(double)( NUM_READ + NUM_WRITE ) );
+    MISS_PENALTY = (20 + 0.5*( ((double)BLOCKSIZE/16) ) );
+    HIT_TIME = ( 0.25 + 2.5*( (double)SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)ASSOC ) );
+    ACCESS_TIME = ( HIT_TIME + ( MISS_RATE*MISS_PENALTY ) );
 }
 
 void Cache::output() {
@@ -106,17 +110,6 @@ void Cache::output() {
 }
 
 
-
-void Cache::getMissRate() {
-    MISS_RATE = ( (double)(NUM_READ_MISS + NUM_WRITE_MISS )/(double)( NUM_READ + NUM_WRITE ) );
-}
-
-void Cache::getAccessTime() {
-    MISS_PENALTY = (20 + 0.5*( ((double)BLOCKSIZE/16) ) );
-    HIT_TIME = ( 0.25 + 2.5*( (double)SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)ASSOC ) );
-    ACCESS_TIME = ( HIT_TIME + ( MISS_RATE*MISS_PENALTY ) );
-}
-
 void Cache::readFromAddress() {
     unsigned int tagLocation = 0;
 
@@ -133,21 +126,17 @@ void Cache::readFromAddress() {
 
     if( REPLACEMENT_POLICY ) {  //LFU
         LFU(indexLocation, &tagLocation);
-
         LRUCounter[tagLocation] = count_set[indexLocation] + 1;
     }
     else {  //LRU
-        	//increase the memory traffic counter
         LRU(indexLocation, &tagLocation);
     }
     c_tagArray[tagLocation] = tagAddress;
 
-    if(WRITE_POLICY == 0)	//Write Back policy
-    {
-        if( dirty_bit[tagLocation] == 1 )
-        {
-            TOT_MEM_TRAFFIC += 1;
-            NUM_WRITEBACK += 1;
+    if( !WRITE_POLICY ) {  //WBWA
+        if( dirty_bit[tagLocation] == 1 ) {
+            TOT_MEM_TRAFFIC ++;
+            NUM_WRITEBACK ++;
             dirty_bit[tagLocation] = 0;
         }
     }
@@ -163,57 +152,41 @@ void Cache::writeToAddress() {
             if( WRITE_POLICY == 0 )
                 dirty_bit[indexLocation + (i*SET)] = 1;
             else if( WRITE_POLICY == 1 )
-                TOT_MEM_TRAFFIC += 1;
+                TOT_MEM_TRAFFIC ++;
 
-                if(REPLACEMENT_POLICY == 0 )	//LRU Policy
-                {
-                    HIT(indexLocation, ( indexLocation + (i*SET) ) );
-                }
-                else if( REPLACEMENT_POLICY == 1 )	//LFU Policy
-                {
-                    LRUCounter[( indexLocation + (i*SET) )] = (LRUCounter[( indexLocation + (i*SET) )]) + 1;
-                }
+            if( REPLACEMENT_POLICY )  //LFU
+                LRUCounter[( indexLocation + (i*SET) )] = (LRUCounter[( indexLocation + (i*SET) )]) + 1;
+            else  //LRU
+                HIT(indexLocation, ( indexLocation + (i*SET) ) );
             return;
         }
     }
 
 
     //Cache Miss
-    //for( int i=0; i< (int)ASSOC; )
-    //{
-        NUM_WRITE_MISS += 1; 	// increase write miss counter
-        TOT_MEM_TRAFFIC += 1;		//increase the memory traffic counter
+    NUM_WRITE_MISS += 1; 	// increase write miss counter
+    TOT_MEM_TRAFFIC += 1;		//increase the memory traffic counter
 
-        if( WRITE_POLICY == 0 )
-        {
-            //printf("\nL1 MISS, WRITE BACK");
-            if(REPLACEMENT_POLICY == 0 )	//LRU Policy
-            {
-                LRU(indexLocation, &tagLocation);
-                LRUCounter[tagLocation] = 0;
-            }
-            else if( REPLACEMENT_POLICY == 1 )	//LFU Policy
-            {
-                LFU(indexLocation, &tagLocation);
-                LRUCounter[tagLocation] = count_set[indexLocation] + 1;
-            }
-
-            if( (int)dirty_bit[tagLocation] == 1 )
-            {
-                TOT_MEM_TRAFFIC += 1;
-                NUM_WRITEBACK += 1;
-            }
-
-            dirty_bit[tagLocation] = 1;
-            c_tagArray[tagLocation] = tagAddress;
-
+    if( !WRITE_POLICY ) {  //WBWA
+        if( REPLACEMENT_POLICY ) {  //LFU
+            LFU(indexLocation, &tagLocation);
+            LRUCounter[tagLocation] = count_set[indexLocation] + 1;
         }
-        //return;
-    //}
+        else {  //LRU
+            LRU(indexLocation, &tagLocation);
+            LRUCounter[tagLocation] = 0;
+        }
 
+        if( dirty_bit[tagLocation] == 1 ) {
+            TOT_MEM_TRAFFIC += 1;
+            NUM_WRITEBACK += 1;
+        }
+
+        dirty_bit[tagLocation] = 1;
+        c_tagArray[tagLocation] = tagAddress;
+    }
     return;
 }
-
 
 void Cache::HIT(unsigned int indexLocation, unsigned int tagLocation) {
     for( int i=0; i<ASSOC; i++)
@@ -222,28 +195,18 @@ void Cache::HIT(unsigned int indexLocation, unsigned int tagLocation) {
     LRUCounter[tagLocation] = 0;
 }
 
-
-
-void Cache::LRU(unsigned int indexLocation, unsigned int* tagLocation)
-{
+void Cache::LRU(unsigned int indexLocation, unsigned int* tagLocation) {
     unsigned int i = 0;
     int max = -1;
     *tagLocation = 0;
-    //printf("\nL1 UPDATE LRU");
     for( i=0; i<ASSOC; i++)
-    {
-        if( LRUCounter[indexLocation + (i*SET)] > max )
-        {
+        if( LRUCounter[indexLocation + (i*SET)] > max ) {
             max = LRUCounter[indexLocation + (i*SET)];
             *tagLocation = ( indexLocation + (i*SET) );
         }
-    }
-
 
     for( i=0; i<ASSOC; i++)
-    {
         LRUCounter[indexLocation + (i*SET)] = (LRUCounter[indexLocation + (i*SET)]) + 1;
-    }
 
     LRUCounter[*tagLocation] = 0;
 
@@ -252,14 +215,11 @@ void Cache::LRU(unsigned int indexLocation, unsigned int* tagLocation)
 
 void Cache::LFU(unsigned int indexLocation, unsigned int* tagLocation) {
     int min = 1<<24;
-    //*tagLocation = 0;
-    //printf("\nL1 UPDATE LFU");
     for( int i=0; i<ASSOC; i++)
         if( LRUCounter[indexLocation + (i*SET)] < min ) {
             min = LRUCounter[indexLocation + (i*SET)];
             *tagLocation = ( indexLocation + (i*SET) );
         }
-    //*tagLocation gives the location of block which is selected to be evicted
     count_set[indexLocation] = LRUCounter[*tagLocation];
 }
 

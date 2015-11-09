@@ -22,8 +22,6 @@ public:
     void init(unsigned int block,unsigned int size,unsigned int assoc,unsigned int replacement,unsigned int write,char *trace);
     void input();
     void output();
-    void getMissRate();
-    void getAccessTime();
 
     void readFromAddress();
     void writeToAddress();
