@@ -22,33 +22,17 @@ void Cache::init(unsigned int block, unsigned int size, unsigned int assoc, unsi
     TOT_MEM_TRAFFIC = 0;
     NUM_WRITEBACK = 0;
 
-    c_tagArray = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
-    dirty_bit = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
-    valid_in_bit = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
-    LRUCounter = (int*)malloc( (TAG*sizeof(int)) );
-    count_set = (int*)malloc( ((SET)*sizeof(int)) );
+    TAGS = (unsigned int*)malloc( TAG*sizeof(unsigned int) );
+    DIRTY = (unsigned int*)malloc( TAG*sizeof(unsigned int) );
+    VALID = (unsigned int*)malloc( TAG*sizeof(unsigned int) );
+    NUM_TAG = (int*)malloc( TAG*sizeof(int) );
+    NUM_SET = (int*)malloc( (SET)*sizeof(int) );
 
-
-    memset(c_tagArray, 0, (sizeof(c_tagArray[0])*TAG) );
-    memset(dirty_bit, 0, (sizeof(dirty_bit[0])*TAG) );
-    memset(valid_in_bit, 0, (sizeof(valid_in_bit[0])*TAG) );
-    memset(LRUCounter, 0, (sizeof(LRUCounter[0])*TAG) );
-    memset(count_set, 0, (sizeof(LRUCounter[0])*(SET)) );
-
-    indexLocation = 0, tagAddress = 0;
-}
-
-void Cache::transAddress(unsigned int address) {
-    int block = (int)log2(BLOCKSIZE);
-    int index = (int)log2(SET);
-    int tmp = 0 ;
-    indexLocation = address>>block;
-
-    for( int i=0; i<index; i++)
-        tmp = tmp<<1 | 1;
-
-    indexLocation &= tmp;
-    tagAddress = address>>(block+index);
+    memset(TAGS, 0, sizeof(TAGS[0])*TAG );
+    memset(DIRTY, 0, sizeof(DIRTY[0])*TAG );
+    memset(VALID, 0, sizeof(VALID[0])*TAG );
+    memset(NUM_TAG, 0, sizeof(NUM_TAG[0])*TAG );
+    memset(NUM_SET, 0, sizeof(NUM_TAG[0])*(SET) );
 }
 
 void Cache::input() {
@@ -65,9 +49,9 @@ void Cache::input() {
             writeToAddress();
         }
     }
-    MISS_RATE = ( (double)(NUM_READ_MISS + NUM_WRITE_MISS )/(double)( NUM_READ + NUM_WRITE ) );
-    MISS_PENALTY = (20 + 0.5*( ((double)BLOCKSIZE/16) ) );
-    HIT_TIME = ( 0.25 + 2.5*( (double)SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)ASSOC ) );
+    MISS_RATE = ( double(NUM_READ_MISS + NUM_WRITE_MISS )/( NUM_READ + NUM_WRITE ) );
+    MISS_PENALTY = (20 + 0.5*( (double)BLOCKSIZE/16) );
+    HIT_TIME = ( 0.25 + 2.5*( (double)SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*ASSOC );
     ACCESS_TIME = ( HIT_TIME + ( MISS_RATE*MISS_PENALTY ) );
 }
 
@@ -88,8 +72,8 @@ void Cache::output() {
     for(int i=0; i<SET; i++) {
         printf("set%4d:", i);
         for(int j=0; j<ASSOC; j++) {
-            printf("%8x ",c_tagArray[i + (j*SET)]);
-            printf( (WRITE_POLICY == 0 && dirty_bit[i + (j*SET)] == 1) ? "D" : " " );
+            printf("%8x ",TAGS[i + (j*SET)]);
+            printf( (WRITE_POLICY == 0 && DIRTY[i + (j*SET)] == 1) ? "D" : " " );
         }
         puts("");
     }
@@ -109,117 +93,115 @@ void Cache::output() {
     printf("  1. average access time:%15.4f ns", ACCESS_TIME);
 }
 
+void Cache::transAddress(unsigned int address) {
+    int block = (int)log2(BLOCKSIZE);
+    int index = (int)log2(SET);
+    int tmp = 0;
+    for( int i=0; i<index; i++)
+        tmp = tmp<<1 | 1;
+    INDEX = address>>block & tmp;
+    TAG_LOC = address>>(block+index);
+}
 
 void Cache::readFromAddress() {
-    unsigned int tagLocation = 0;
+    TAG_ADD = 0;
 
-    for( int i=0; i<ASSOC; i++)
-        if( c_tagArray[indexLocation + (i*SET)] == tagAddress )	{
-            if( REPLACEMENT_POLICY )  //LFU
-                LRUCounter[( indexLocation + (i*SET) )] = (LRUCounter[( indexLocation + (i*SET) )]) + 1;
+    for( int i=0; i<ASSOC; i++) {
+        int index = INDEX + (i * SET);
+        if (TAGS[index] == TAG_LOC) {
+            if (REPLACEMENT_POLICY)  //LFU
+                NUM_TAG[index] = (NUM_TAG[index]) + 1;
             else  //LRU
-                HIT(indexLocation, ( indexLocation + (i*SET) ) );
+                HIT(index);
             return;
         }
+    }
 
     NUM_READ_MISS++, TOT_MEM_TRAFFIC++;
 
     if( REPLACEMENT_POLICY ) {  //LFU
-        LFU(indexLocation, &tagLocation);
-        LRUCounter[tagLocation] = count_set[indexLocation] + 1;
+        LFU();
+        NUM_TAG[TAG_ADD] = NUM_SET[INDEX] + 1;
     }
-    else {  //LRU
-        LRU(indexLocation, &tagLocation);
-    }
-    c_tagArray[tagLocation] = tagAddress;
+    else  //LRU
+        LRU();
 
-    if( !WRITE_POLICY ) {  //WBWA
-        if( dirty_bit[tagLocation] == 1 ) {
+    TAGS[TAG_ADD] = TAG_LOC;
+
+    if( !WRITE_POLICY )  //WBWA
+        if( DIRTY[TAG_ADD] == 1 ) {
             TOT_MEM_TRAFFIC ++;
             NUM_WRITEBACK ++;
-            dirty_bit[tagLocation] = 0;
+            DIRTY[TAG_ADD] = 0;
         }
-    }
-
     return;
 }
 
 void Cache::writeToAddress() {
-    unsigned int tagLocation = 0;
-
     for( int i=0; i<ASSOC; i++) {
-        if( c_tagArray[indexLocation + (i*SET)] == tagAddress ) {
+        int index = INDEX + (i*SET);
+        if( TAGS[index] == TAG_LOC ) {
             if( WRITE_POLICY == 0 )
-                dirty_bit[indexLocation + (i*SET)] = 1;
+                DIRTY[index] = 1;
             else if( WRITE_POLICY == 1 )
                 TOT_MEM_TRAFFIC ++;
 
             if( REPLACEMENT_POLICY )  //LFU
-                LRUCounter[( indexLocation + (i*SET) )] = (LRUCounter[( indexLocation + (i*SET) )]) + 1;
+                NUM_TAG[index] = (NUM_TAG[index]) + 1;
             else  //LRU
-                HIT(indexLocation, ( indexLocation + (i*SET) ) );
+                HIT( index );
             return;
         }
     }
 
-
     //Cache Miss
-    NUM_WRITE_MISS += 1; 	// increase write miss counter
-    TOT_MEM_TRAFFIC += 1;		//increase the memory traffic counter
+    NUM_WRITE_MISS ++,TOT_MEM_TRAFFIC ++;
 
     if( !WRITE_POLICY ) {  //WBWA
         if( REPLACEMENT_POLICY ) {  //LFU
-            LFU(indexLocation, &tagLocation);
-            LRUCounter[tagLocation] = count_set[indexLocation] + 1;
+            LFU();
+            NUM_TAG[TAG_ADD] = NUM_SET[INDEX] + 1;
         }
         else {  //LRU
-            LRU(indexLocation, &tagLocation);
-            LRUCounter[tagLocation] = 0;
+            LRU();
+            NUM_TAG[TAG_ADD] = 0;
         }
 
-        if( dirty_bit[tagLocation] == 1 ) {
-            TOT_MEM_TRAFFIC += 1;
-            NUM_WRITEBACK += 1;
-        }
+        if( DIRTY[TAG_ADD] )
+            TOT_MEM_TRAFFIC ++, NUM_WRITEBACK ++;
 
-        dirty_bit[tagLocation] = 1;
-        c_tagArray[tagLocation] = tagAddress;
+        DIRTY[TAG_ADD] = 1;
+        TAGS[TAG_ADD] = TAG_LOC;
     }
     return;
 }
 
-void Cache::HIT(unsigned int indexLocation, unsigned int tagLocation) {
+void Cache::HIT(int index) {
     for( int i=0; i<ASSOC; i++)
-        if( LRUCounter[indexLocation + (i*SET)] < LRUCounter[tagLocation] )
-            LRUCounter[indexLocation + (i*SET)] = (LRUCounter[indexLocation + (i*SET)]) + 1;
-    LRUCounter[tagLocation] = 0;
+        if( NUM_TAG[INDEX + (i*SET)] < NUM_TAG[index] )
+            NUM_TAG[INDEX + (i*SET)] = (NUM_TAG[INDEX + (i*SET)]) + 1;
+    NUM_TAG[index] = 0;
 }
 
-void Cache::LRU(unsigned int indexLocation, unsigned int* tagLocation) {
-    unsigned int i = 0;
-    int max = -1;
-    *tagLocation = 0;
-    for( i=0; i<ASSOC; i++)
-        if( LRUCounter[indexLocation + (i*SET)] > max ) {
-            max = LRUCounter[indexLocation + (i*SET)];
-            *tagLocation = ( indexLocation + (i*SET) );
+void Cache::LRU() {
+    for( int i=0, max=-1; i<ASSOC; i++)
+        if( NUM_TAG[INDEX + (i*SET)] > max ) {
+            max = NUM_TAG[INDEX + (i*SET)];
+            TAG_ADD = ( INDEX + (i*SET) );
         }
 
-    for( i=0; i<ASSOC; i++)
-        LRUCounter[indexLocation + (i*SET)] = (LRUCounter[indexLocation + (i*SET)]) + 1;
+    for( int i=0; i<ASSOC; i++)
+        NUM_TAG[INDEX + (i*SET)] = (NUM_TAG[INDEX + (i*SET)]) + 1;
 
-    LRUCounter[*tagLocation] = 0;
-
+    NUM_TAG[TAG_ADD] = 0;
 }
 
-
-void Cache::LFU(unsigned int indexLocation, unsigned int* tagLocation) {
-    int min = 1<<24;
-    for( int i=0; i<ASSOC; i++)
-        if( LRUCounter[indexLocation + (i*SET)] < min ) {
-            min = LRUCounter[indexLocation + (i*SET)];
-            *tagLocation = ( indexLocation + (i*SET) );
+void Cache::LFU() {
+    for( int i=0, min=1<<24; i<ASSOC; i++)
+        if( NUM_TAG[INDEX + (i*SET)] < min ) {
+            min = NUM_TAG[INDEX + (i*SET)];
+            TAG_ADD = ( INDEX + (i*SET) );
         }
-    count_set[indexLocation] = LRUCounter[*tagLocation];
+    NUM_SET[INDEX] = NUM_TAG[TAG_ADD];
 }
 
