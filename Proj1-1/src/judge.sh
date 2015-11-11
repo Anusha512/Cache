@@ -1,7 +1,6 @@
 #!/bin/bash
 function run()
 {
-    #echo -n "Running..."
     echo -n "Running on test 1...  verdict:"
     ./sim_cache  16 16384 1 0 0 ../traces/gcc_trace.txt  > ../results/DebugRun1.txt
     diff ../results/DebugRun1.txt ../validation/ValidationRun1.txt
