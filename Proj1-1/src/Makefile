@@ -1,4 +1,4 @@
-CC = g++
+CC = gcc
 OPT = -O3 -m32
 #OPT = -g -m32
 WARN = -Wall
