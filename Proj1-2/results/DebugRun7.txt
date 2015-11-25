@@ -146,19 +146,19 @@ set 125: 80046     80045  D  80044  D  80043  D
 set 126: 80046     80045  D  80044  D  80043  D  
 set 127: 80046     80045  D  80044  D  80043  D  
 ====== Simulation results (raw) ======
-a. number of L1 reads:                60613 
-b. number of L1 read misses:          3819  
-c. number of L1 writes:               39387 
-d. number of L1 write misses:         6341  
+a. number of L1 reads:                60613
+b. number of L1 read misses:          3819
+c. number of L1 writes:              39387
+d. number of L1 write misses:         6341
 e. L1 miss rate:                      0.1016
-f. number of swaps:                   0     
-g. number of victim cache writeback:  0     
-h. number of L2 reads:                10160 
-i. number of L2 read misses:          9847  
-j. number of L2 writes:               8323  
-k. number of L2 write misses:         3     
+f. number of swaps:                   0
+g. number of victim cache writeback:  0
+h. number of L2 reads:                10160
+i. number of L2 read misses:          9847
+j. number of L2 writes:               8323
+k. number of L2 write misses:         3
 l. L2 miss rate:                      0.9692
-m. number of L2 writebacks:           7869  
-n. total memory traffic:              17719 
+m. number of L2 writebacks:           7869
+n. total memory traffic:              17719
 ==== Simulation results (performance) ====
 1. average access time:         2.7692 ns

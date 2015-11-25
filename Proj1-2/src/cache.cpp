@@ -125,7 +125,7 @@ void CACHE::output() {
             {
                 Victim.LRUCounter[j+1] = Victim.LRUCounter[j];
                 Victim.TAGS[j+1] = Victim.TAGS[j];
-                Victim.DIRTY[j+1] = Victim.DIRTY[j];;
+                Victim.DIRTY[j+1] = Victim.DIRTY[j];
 
                 j = j-1;
             }
@@ -206,16 +206,13 @@ void CACHE::output() {
 
 
     printf("====== Simulation results (raw) ======\n");
-    printf("%-38s%-6d\n", "a. number of L1 reads:", L1.NUM_READ);
-    printf("%-38s%-6d\n", "b. number of L1 read misses:", L1.NUM_READ_MISS);
-    printf("%-38s%-6d\n", "c. number of L1 writes:", L1.NUM_WRITE);
-    printf("%-38s%-6d\n", "d. number of L1 write misses:", L1.NUM_WRITE_MISS);
+    printf("%-38s%d\n", "a. number of L1 reads:", L1.NUM_READ);
+    printf("%-38s%d\n", "b. number of L1 read misses:", L1.NUM_READ_MISS);
+    printf("%-37s%d\n", "c. number of L1 writes:", L1.NUM_WRITE);
+    printf("%-38s%d\n", "d. number of L1 write misses:", L1.NUM_WRITE_MISS);
     printf("%-38s%-2.4f\n", "e. L1 miss rate:", L1.MISS_RATE);
-
-
-    //Victim cache results
-    printf("%-38s%-6d\n", "f. number of swaps:", Victim.NUM_SWAP);
-    printf("%-38s%-6d\n", "g. number of victim cache writeback:", Victim.NUM_WRITEBACK);
+    printf("%-38s%d\n", "f. number of swaps:", Victim.NUM_SWAP);
+    printf("%-38s%d\n", "g. number of victim cache writeback:", Victim.NUM_WRITEBACK);
 
     //L2 cache calculation
     L2.MISS_RATE = ( (double)( (int)L2.NUM_READ_MISS )/(double)( (int)L2.NUM_READ ) );
@@ -225,20 +222,21 @@ void CACHE::output() {
 
     L2.HIT_TIME = ( 2.5 + 2.5*( (double)L2.SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)L2.ASSOC ) );
 
-    printf("%-38s%-6d\n", "h. number of L2 reads:", L2.NUM_READ);
-    printf("%-38s%-6d\n", "i. number of L2 read misses:", L2.NUM_READ_MISS);
-    printf("%-38s%-6d\n", "j. number of L2 writes:", L2.NUM_WRITE);
-    printf("%-38s%-6d\n", "k. number of L2 write misses:", L2.NUM_WRITE_MISS);
+    printf("%-38s%d\n", "h. number of L2 reads:", L2.NUM_READ);
+    printf("%-38s%d\n", "i. number of L2 read misses:", L2.NUM_READ_MISS);
+    printf("%-38s%d\n", "j. number of L2 writes:", L2.NUM_WRITE);
+    printf("%-38s%d\n", "k. number of L2 write misses:", L2.NUM_WRITE_MISS);
     if( L2.SIZE == 0 )
-        printf("%-38s%-6c\n", "l. L2 miss rate:", '0');
+        printf("%-38s%c\n", "l. L2 miss rate:", '0');
     else
         printf("%-38s%-2.4f\n", "l. L2 miss rate:", L2.MISS_RATE);
-    printf("%-38s%-6d\n", "m. number of L2 writebacks:", L2.NUM_WRITEBACK);
+
+    printf("%-38s%d\n", "m. number of L2 writebacks:", L2.NUM_WRITEBACK);
 
     if(L2.SIZE == 0)
-        printf("%-38s%-6d\n", "n. total memory traffic:", L1.NUM_ACCESS);
+        printf("%-38s%d\n", "n. total memory traffic:", L1.NUM_ACCESS);
     else
-        printf("%-38s%-6d\n", "n. total memory traffic:", L2.NUM_ACCESS);
+        printf("%-38s%d\n", "n. total memory traffic:", L2.NUM_ACCESS);
 
 
     if(L2.SIZE != 0)
@@ -280,7 +278,7 @@ void CACHE::extractAddressParams(unsigned int addressInInt, Cache cache_ds, unsi
 
 //Recursive solution
 
-int CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size)
+void CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size)
 {
     int i=0, foundInvalidEntry = 0, noOfBlockBits = 0, noOfIndexBits = 0;
     unsigned int tagLocation = 0, indexLocation = 0, tagAddress = 0, tempAdd=0, temptagLocation = 0;
@@ -302,7 +300,7 @@ int CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned 
             {
                 LRUForHit(cache_ds, indexLocation, ( indexLocation + (i*cache_ds.SET) ) );
 
-                return(0);
+                return;
             }
         }
     }
@@ -333,7 +331,7 @@ int CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned 
         cache_ds.DIRTY[tagLocation] = 0;
         LRUForMiss(cache_ds, indexLocation, &temptagLocation);
         cache_ds.LRUCounter[tagLocation] = 0;
-        return(0);
+        return;
     }
 
 
@@ -346,7 +344,7 @@ int CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned 
 
         readFromVictimCache(addressInInt, cache_ds, tagLocation, 'r');
 
-        return(0);
+        return;
     }
 
     cache_ds.NUM_READ_MISS += 1;
@@ -378,13 +376,13 @@ int CACHE::readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned 
 
     cache_ds.TAGS[tagLocation] = tagAddress;
 
-    return(0);
+    return;
 }
 
 
 
 
-int CACHE::readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw)
+void CACHE::readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw)
 {
     int noOfBlockBits = 0, noOfIndexBitsCache = 0, i=0;
     unsigned int tagAddress = 0, indexLocOfCache = 0, vcTagLocation = 0;
@@ -415,7 +413,7 @@ int CACHE::readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsig
                 Victim.NUM_SWAP ++;
                 if( rw == 'w' )
                     cache_ds.DIRTY[tagLocationCache] = 1;
-                return(0);
+                return;
             }
         }
     }
@@ -465,8 +463,6 @@ int CACHE::readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsig
         cache_ds.DIRTY[tagLocationCache] = 0;
     else
         cache_ds.DIRTY[tagLocationCache] = 1;
-
-    return(0);
 }
 
 
@@ -475,7 +471,7 @@ int CACHE::readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsig
 
 //Recursive solution
 
-int CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size)
+void CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size)
 {
 
     int i=0, foundInvalidEntry = 0;
@@ -500,7 +496,7 @@ int CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned i
                 cache_ds.DIRTY[indexLocation + (i*cache_ds.SET)] = 1;
                 LRUForHit(cache_ds, indexLocation, ( indexLocation + (i*cache_ds.SET) ) );
 
-                return(0);
+                return;
             }
         }
     }
@@ -532,7 +528,7 @@ int CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned i
 
         LRUForMiss(cache_ds, indexLocation, &temptagLocation);
         cache_ds.LRUCounter[tagLocation] = 0;
-        return(0);
+        return;
     }
 
 
@@ -543,7 +539,7 @@ int CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned i
 
         readFromVictimCache(addressInInt, cache_ds, tagLocation, 'w');
 
-        return(0);
+        return;
     }
 
     cache_ds.NUM_WRITE_MISS += 1;
@@ -575,13 +571,13 @@ int CACHE::writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned i
     cache_ds.TAGS[tagLocation] = tagAddress;
 
 
-    return(0);
+    return;
 }
 
 
 
 
-void LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocation)
+void CACHE::LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocation)
 {
     int i = 0;
 
@@ -598,7 +594,7 @@ void LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocat
 
 
 
-void LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLocation)
+void CACHE::LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLocation)
 {
     unsigned int i = 0;
     int max = -1;
@@ -623,7 +619,7 @@ void LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLoc
 
 
 
-void LRUForHitVC(Cache &cache_ds, unsigned int indexLocation)
+void CACHE::LRUForHitVC(Cache &cache_ds, unsigned int indexLocation)
 {
     int i = 0;
 
@@ -640,7 +636,7 @@ void LRUForHitVC(Cache &cache_ds, unsigned int indexLocation)
 
 
 
-void LRUForMissVC(Cache &cache_ds, unsigned int* tagLocation)
+void CACHE::LRUForMissVC(Cache &cache_ds, unsigned int* tagLocation)
 {
     unsigned int i = 0;
     int max = -1;

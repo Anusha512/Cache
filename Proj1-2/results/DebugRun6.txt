@@ -42,19 +42,19 @@ set 13: 20028d    2001b3 D  20018d    2001ab D  20013a    2001b2 D  20028c    20
 set 14: 20028d    20028c D  20018d    2001a7 D  20013a    2001b2 D  2001ad D  2001fd D  
 set 15: 20013a    20028d D  20018d    200197 D  2001f8    2001a9 D  200222 D  2001d1 D  
 ====== Simulation results (raw) ======
-a. number of L1 reads:                63640 
-b. number of L1 read misses:          5170  
-c. number of L1 writes:               36360 
-d. number of L1 write misses:         4452  
+a. number of L1 reads:                63640
+b. number of L1 read misses:          5170
+c. number of L1 writes:              36360
+d. number of L1 write misses:         4452
 e. L1 miss rate:                      0.0962
-f. number of swaps:                   0     
-g. number of victim cache writeback:  0     
-h. number of L2 reads:                9622  
-i. number of L2 read misses:          5313  
-j. number of L2 writes:               4942  
-k. number of L2 write misses:         151   
+f. number of swaps:                   0
+g. number of victim cache writeback:  0
+h. number of L2 reads:                9622
+i. number of L2 read misses:          5313
+j. number of L2 writes:               4942
+k. number of L2 write misses:         151
 l. L2 miss rate:                      0.5522
-m. number of L2 writebacks:           2978  
-n. total memory traffic:              8442  
+m. number of L2 writebacks:           2978
+n. total memory traffic:              8442
 ==== Simulation results (performance) ====
 1. average access time:         1.7920 ns

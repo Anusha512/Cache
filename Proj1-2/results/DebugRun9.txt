@@ -24,19 +24,19 @@ set 5: 100004    10007c    1000c7 D  100146 D
 set 6: 100004    1000bd D  1000d5    10007c    
 set 7: 1000c7    1000d5    1000c6 D  10011f    
 ====== Simulation results (raw) ======
-a. number of L1 reads:                63640 
-b. number of L1 read misses:          8160  
-c. number of L1 writes:               36360 
-d. number of L1 write misses:         3824  
+a. number of L1 reads:                63640
+b. number of L1 read misses:          8160
+c. number of L1 writes:              36360
+d. number of L1 write misses:         3824
 e. L1 miss rate:                      0.1198
-f. number of swaps:                   9722  
-g. number of victim cache writeback:  4763  
-h. number of L2 reads:                11984 
-i. number of L2 read misses:          7690  
-j. number of L2 writes:               4763  
-k. number of L2 write misses:         1205  
+f. number of swaps:                   9722
+g. number of victim cache writeback:  4763
+h. number of L2 reads:                11984
+i. number of L2 read misses:          7690
+j. number of L2 writes:               4763
+k. number of L2 write misses:         1205
 l. L2 miss rate:                      0.6417
-m. number of L2 writebacks:           3198  
-n. total memory traffic:              12093 
+m. number of L2 writebacks:           3198
+n. total memory traffic:              12093
 ==== Simulation results (performance) ====
 1. average access time:         2.6884 ns

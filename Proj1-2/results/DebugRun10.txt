@@ -140,19 +140,19 @@ set 61: 4002c     4002b  D  40029  D  4001d  D
 set 62: 4002c     4002a  D  4002b     4001d  D  
 set 63: 4002c     4001c  D  4002b     4002a  D  
 ====== Simulation results (raw) ======
-a. number of L1 reads:                70107 
-b. number of L1 read misses:          1927  
-c. number of L1 writes:               29893 
-d. number of L1 write misses:         569   
+a. number of L1 reads:                70107
+b. number of L1 read misses:          1927
+c. number of L1 writes:              29893
+d. number of L1 write misses:         569
 e. L1 miss rate:                      0.0250
-f. number of swaps:                   1382  
-g. number of victim cache writeback:  766   
-h. number of L2 reads:                2496  
-i. number of L2 read misses:          1268  
-j. number of L2 writes:               766   
-k. number of L2 write misses:         123   
+f. number of swaps:                   1382
+g. number of victim cache writeback:  766
+h. number of L2 reads:                2496
+i. number of L2 read misses:          1268
+j. number of L2 writes:               766
+k. number of L2 write misses:         123
 l. L2 miss rate:                      0.5080
-m. number of L2 writebacks:           415   
-n. total memory traffic:              1806  
+m. number of L2 writebacks:           415
+n. total memory traffic:              1806
 ==== Simulation results (performance) ====
 1. average access time:         0.7874 ns
