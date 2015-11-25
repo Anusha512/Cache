@@ -4,8 +4,7 @@
 class Cache {
 public:
     unsigned int BLOCKSIZE, SIZE, ASSOC, REPLACEMENT_POLICY, WRITE_POLICY;
-    char *TRACE_FILE;
-    unsigned int NUM_READ, NUM_READ_MISS, NUM_WRITE, NUM_WRITE_MISS, NUM_WRITEBACK, TOT_MEM_TRAFFIC;
+    unsigned int NUM_READ, NUM_READ_MISS, NUM_WRITE, NUM_WRITE_MISS, NUM_WRITEBACK, NUM_SWAP, NUM_ACCESS;
     double MISS_RATE, MISS_PENALTY, HIT_TIME, ACCESS_TIME;
 
 public:
@@ -17,16 +16,13 @@ public:
 
 
     int* LRUCounter;
-    unsigned int memoryAccessCounter;
-    int noOfSwaps;
+    //unsigned int memoryAccessCounter;
 
 
     Cache *nextLevel;
-    bool has;
 
-    void init(unsigned int block,unsigned int size,unsigned int assoc,unsigned int replacement,unsigned int write,char *trace);
-    void input();
-    void output();
+    void init(unsigned int block,unsigned int size,unsigned int assoc);
+
 
     void readFromAddress();
     void writeToAddress();
@@ -40,14 +36,25 @@ public:
 
 };
 
+class CACHE {
+public:
+    Cache L1,L2,Victim;
+    char *TRACE_FILE;
+    unsigned int key, tagKey, dirtyKey;
+    void init();
+    void input();
+    void output();
+};
+
+
 void extractAddressParams(unsigned int addressInInt, Cache l1Cache, unsigned int* indexLocation, unsigned int* tagAddress);
-int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache victimCache, unsigned int vc_size);
-int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache victimCache, unsigned int vc_size);
+int readFromAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCache, unsigned int vc_size);
+int writeToAddress(Cache &cache_ds, unsigned int addressInInt, Cache &victimCache, unsigned int vc_size);
 
 void LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocation);
-void LRUForMiss(Cache l1Cache, unsigned int indexLocation, unsigned int* tagLocation);
+void LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLocation);
 
-int readFromVictimCache(Cache victimCache, unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw);
+int readFromVictimCache(Cache &victimCache, unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw);
 void LRUForHitVC(Cache &cache_ds, unsigned int indexLocation);
 void LRUForMissVC(Cache &cache_ds, unsigned int* tagLocation);
 
