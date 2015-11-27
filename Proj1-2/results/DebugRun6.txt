@@ -44,7 +44,7 @@ set 15: 20013a    20028d D  20018d    200197 D  2001f8    2001a9 D  200222 D  20
 ====== Simulation results (raw) ======
 a. number of L1 reads:                63640
 b. number of L1 read misses:          5170
-c. number of L1 writes:              36360
+c. number of L1 writes:		     36360
 d. number of L1 write misses:         4452
 e. L1 miss rate:                      0.0962
 f. number of swaps:                   0

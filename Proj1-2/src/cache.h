@@ -15,7 +15,7 @@ public:
     unsigned int c_numOfSets;
 
 
-    int* LRUCounter;
+    unsigned int* LRUCounter;
     //unsigned int memoryAccessCounter;
 
 
@@ -23,7 +23,7 @@ public:
 
     void init(unsigned int size, unsigned int assoc, unsigned int set, unsigned int tag);
 
-    void transAddress(unsigned int address);
+
 
     friend class CACHE;
 
@@ -37,20 +37,20 @@ private:
     unsigned int key, tagKey, dirtyKey;
 
 public:
-
+    //unsigned int TAG_LOC, TAG_ADD, INDEX;
     void init(unsigned int block, unsigned int size1, unsigned int assoc1, unsigned int sizev, unsigned int size2, unsigned int assoc2, char *trace);
     void input();
     void output();
-
-    void extractAddressParams(unsigned int addressInInt, Cache l1Cache, unsigned int* indexLocation, unsigned int* tagAddress);
-    void readFromAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size);
-    void writeToAddress(Cache &cache_ds, unsigned int addressInInt, unsigned int vc_size);
-    void readFromVictimCache(unsigned int addressInInt, Cache &cache_ds, unsigned int tagLocationCache, char rw);
+    void transAddress(Cache &cache_ds, unsigned int address);
+    void extractAddressParams(unsigned int address, Cache l1Cache, unsigned int* indexLocation, unsigned int* tagAddress);
+    void readFromAddress(Cache &cache_ds, unsigned int address, unsigned int vc_size);
+    void writeToAddress(Cache &cache_ds, unsigned int address, unsigned int vc_size);
+    void readFromVictim(Cache &cache_ds, unsigned int address, unsigned int tagLocationCache, char rw);
     void LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocation);
     void LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLocation);
 
-    void LRUForHitVC(Cache &cache_ds, unsigned int indexLocation);
-    void LRUForMissVC(Cache &cache_ds, unsigned int* tagLocation);
+    void LRUForHitVC(unsigned int indexLocation);
+    void LRUForMissVC(unsigned int* tagLocation);
 
 };
 

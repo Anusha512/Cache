@@ -13,11 +13,11 @@ set 1: 80056c    800045    80058c    8003d7    8002c1 D  800379    8003d8    800
 set 2: 800045    80058c D  8003d2    800379 D  f6067d D  80018e    8003d8    f60677    
 set 3: 800580    8003d1    f6067d D  800325    80018e    8003d8    8003d2 D  800276    
 ===== Victim Cache contents =====
-set 0: 2000f4f   3d819ed D  20006a2 D  20009da   3d819dd   20006a1   20006a5 D  2000f4c D  
+set 0: 2000f4f    3d819ed D  20006a2 D  20009da    3d819dd    20006a1    20006a5 D  2000f4c D  
 ====== Simulation results (raw) ======
 a. number of L1 reads:                70107
 b. number of L1 read misses:          14002
-c. number of L1 writes:              29893
+c. number of L1 writes:		     29893
 d. number of L1 write misses:         4835
 e. L1 miss rate:                      0.1884
 f. number of swaps:                   4060
