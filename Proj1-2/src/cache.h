@@ -9,7 +9,7 @@ private:
 
 public:
     //unsigned int SET,TAG,INDEX,TAG_LOC, TAG_ADD;
-    unsigned int *TAGS, *DIRTY, *VALID;
+    unsigned int *TAGS, *DIRTY, *VALID, *LRU;
     int *NUM_TAG, *NUM_SET;
 
     unsigned int c_numOfSets;

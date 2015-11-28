@@ -5,14 +5,14 @@
 
 CACHE cache;
 int main(int argc, char **argv) {
-
     if(argc<7) {
         printf("\nUsage: ./sim_cache [BLOCKSIZE] [L1_SIZE] [L1_ASSOC] [Victim_Cache_SIZE]"
                        " [L2_SIZE] [L2_ASSOC] [trace_file] > [output_file]\n");
         return 0;
     }
 
-    freopen(argv[7],"r",stdin);
+    if(!freopen(argv[7],"r",stdin))
+        return 0;
 
     unsigned int block = (unsigned)atoi(argv[1]);
     unsigned int size1 = (unsigned)atoi(argv[2]);
