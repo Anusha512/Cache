@@ -9,16 +9,16 @@ void Cache::init(unsigned int size, unsigned int assoc, unsigned int set, unsign
     ASSOC = assoc;
     SET = set;
     TAG = tag;
-    
+
+    LRUC = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
     TAGS = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
     DIRTY = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
     VALID = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
-    LRU = (unsigned int*)malloc( (TAG*sizeof(unsigned int)) );
 
+    memset( LRUC, 0, (sizeof(LRUC[0])*TAG) );
     memset( TAGS, 0, (sizeof(TAGS[0])*TAG) );
     memset( DIRTY, 0, (sizeof(DIRTY[0])*TAG) );
     memset( VALID, 0, (sizeof(VALID[0])*TAG) );
-    memset( LRU, 0, (sizeof(LRU[0])*TAG) );
 
     NUM_READ = 0;
     NUM_WRITE = 0;
@@ -26,7 +26,7 @@ void Cache::init(unsigned int size, unsigned int assoc, unsigned int set, unsign
     NUM_WRITE_MISS = 0;
     NUM_ACCESS = 0;
     NUM_WRITEBACK = 0;
-    MISS_RATE =0;
+    MISS_RATE = 0;
     MISS_PENALTY = 0;
     HIT_TIME = 0;
     ACCESS_TIME = 0;
@@ -71,124 +71,72 @@ void CACHE::output() {
     printf("===== L1 contents =====\n");
 
     for(i=0; i<L1.SET; i++) {
+        //sort L1
         for(j=1; j<L1.ASSOC; j++) {
-            LRU_KEY = L1.LRU[i + (j*L1.SET)];
-            TAG_KEY = L1.TAGS[i + (j*L1.SET)];
-            DIR_KEY = L1.DIRTY[i + (j*L1.SET)];
-            k = j-1;
-
-            while( (k>=0) && ( LRU_KEY < ( L1.LRU[i + (k*L1.SET)] ) ) )
-            {
-                L1.LRU[i + ((k+1)*L1.SET)] = L1.LRU[i + (k*L1.SET)];
-                L1.TAGS[i + ((k+1)*L1.SET)] = L1.TAGS[i + (k*L1.SET)];
-                L1.DIRTY[i + ((k+1)*L1.SET)] = L1.DIRTY[i + (k*L1.SET)];;
-
-                k = k-1;
+            LRU_KEY = L1.LRUC[i+(j*L1.SET)];
+            TAG_KEY = L1.TAGS[i+(j*L1.SET)];
+            DIR_KEY = L1.DIRTY[i+(j*L1.SET)];
+            for(k = j-1; k>=0 && LRU_KEY<L1.LRUC[i+(k*L1.SET)]; k--) {
+                L1.LRUC[i+((k+1)*L1.SET)] = L1.LRUC[i+(k*L1.SET)];
+                L1.TAGS[i+((k+1)*L1.SET)] = L1.TAGS[i+(k*L1.SET)];
+                L1.DIRTY[i+((k+1)*L1.SET)] = L1.DIRTY[i+(k*L1.SET)];
             }
-
-            L1.LRU[i + ((k+1)*L1.SET)] = LRU_KEY;
-            L1.TAGS[i + ((k+1)*L1.SET)] = TAG_KEY;
-            L1.DIRTY[i + ((k+1)*L1.SET)] = DIR_KEY;
-
+            L1.LRUC[i+((k+1)*L1.SET)] = LRU_KEY;
+            L1.TAGS[i+((k+1)*L1.SET)] = TAG_KEY;
+            L1.DIRTY[i+((k+1)*L1.SET)] = DIR_KEY;
         }
-
         printf("set %d: ", i);
-        for(j=0; j<L1.ASSOC; j++) {
-            if( L1.DIRTY[i + (j*L1.SET)] == 1)
-                printf("%x D  ",L1.TAGS[i + (j*L1.SET)]);
-            else
-                printf("%x    ",L1.TAGS[i + (j*L1.SET)]);
-        }
+        for(j=0; j<L1.ASSOC; j++)
+            printf("%x %c  ",L1.TAGS[i+(j*L1.SET)], L1.DIRTY[i+(j*L1.SET)]?'D':' ');
         puts("");
     }
 
-
-    if( Victim.SIZE != 0)
-    {
+    if( Victim.SIZE ) {
         printf("===== Victim Cache contents =====\n");
         printf("set 0: ");
-
-
-        //sort victim cache based on LRU counter
-        for( i=1; i<Victim.ASSOC; i++)
-        {
-            LRU_KEY = Victim.LRU[i];
+        //sort Victim
+        for( i=1; i<Victim.ASSOC; i++) {
+            LRU_KEY = Victim.LRUC[i];
             TAG_KEY = Victim.TAGS[i];
             DIR_KEY = Victim.DIRTY[i];
-            j = i-1;
-
-            while( ((j>=0) && (LRU_KEY<Victim.LRU[j]) ))
-            {
-                Victim.LRU[j+1] = Victim.LRU[j];
+            for( j = i-1; j>=0 && LRU_KEY<Victim.LRUC[j];j--) {
+                Victim.LRUC[j+1] = Victim.LRUC[j];
                 Victim.TAGS[j+1] = Victim.TAGS[j];
                 Victim.DIRTY[j+1] = Victim.DIRTY[j];
-
-                j = j-1;
             }
-
-            Victim.LRU[j+1] = LRU_KEY;
+            Victim.LRUC[j+1] = LRU_KEY;
             Victim.TAGS[j+1] = TAG_KEY;
             Victim.DIRTY[j+1] = DIR_KEY;
         }
-
-
-
-
-        for( i=0; i<Victim.ASSOC; i++) {
-            if( Victim.DIRTY[i] )
-                printf("%x D  ",Victim.TAGS[i]);
-            else
-                printf("%x    ",Victim.TAGS[i]);
-        }
+        for(i=0; i<Victim.ASSOC; i++)
+            printf("%x %c  ",Victim.TAGS[i], Victim.DIRTY[i]?'D':' ');
         puts("");
     }
 
-
-
-    if( L2.SIZE != 0)
-    {
-
+    if( L2.SIZE ) {
         printf("===== L2 contents =====\n");
-
-        for( i=0; i<L2.SET; i++)
-        {
-
-            //sort L2 cache based on LRU counter
-            for( j=1; j<L2.ASSOC; j++)
-            {
-                LRU_KEY = L2.LRU[i + (j*L2.SET)];
-                TAG_KEY = L2.TAGS[i + (j*L2.SET)];
-                DIR_KEY = L2.DIRTY[i + (j*L2.SET)];
-                k = j-1;
-
-                while( (k>=0) && ( LRU_KEY < ( L2.LRU[i + (k*L2.SET)] ) ) )
-                {
-                    L2.LRU[i + ((k+1)*L2.SET)] = L2.LRU[i + (k*L2.SET)];
-                    L2.TAGS[i + ((k+1)*L2.SET)] = L2.TAGS[i + (k*L2.SET)];
-                    L2.DIRTY[i + ((k+1)*L2.SET)] = L2.DIRTY[i + (k*L2.SET)];
-
-                    k = k-1;
+        for( i=0; i<L2.SET; i++) {
+            //sort L2
+            for( j=1; j<L2.ASSOC; j++) {
+                LRU_KEY = L2.LRUC[i+(j*L2.SET)];
+                TAG_KEY = L2.TAGS[i+(j*L2.SET)];
+                DIR_KEY = L2.DIRTY[i+(j*L2.SET)];
+                for( k = j-1; k>=0 && LRU_KEY<L2.LRUC[i+(k*L2.SET)]; k-- ) {
+                    L2.LRUC[i+((k+1)*L2.SET)] = L2.LRUC[i+(k*L2.SET)];
+                    L2.TAGS[i+((k+1)*L2.SET)] = L2.TAGS[i+(k*L2.SET)];
+                    L2.DIRTY[i+((k+1)*L2.SET)] = L2.DIRTY[i+(k*L2.SET)];
                 }
-
-                L2.LRU[i + ((k+1)*L2.SET)] = LRU_KEY;
-                L2.TAGS[i + ((k+1)*L2.SET)] = TAG_KEY;
-                L2.DIRTY[i + ((k+1)*L2.SET)] = DIR_KEY;
+                L2.LRUC[i+((k+1)*L2.SET)] = LRU_KEY;
+                L2.TAGS[i+((k+1)*L2.SET)] = TAG_KEY;
+                L2.DIRTY[i+((k+1)*L2.SET)] = DIR_KEY;
 
             }
-
-
             printf("set %d: ", i);
-            for( j=0; j<L2.ASSOC; j++)
-            {
-                if( L2.DIRTY[i + (j*L2.SET)] == 1)
-                    printf("%x D  ",L2.TAGS[i + (j*L2.SET)]);
-                else
-                    printf("%x    ",L2.TAGS[i + (j*L2.SET)]);
-            }
-            printf("\n");
+            for(j=0; j<L2.ASSOC; j++)
+                printf("%x %c  ",L2.TAGS[i+(j*L2.SET)], L2.DIRTY[i+(j*L2.SET)]?'D':' ');
+            puts("");
         }
     }
-
 
     //L1 calculation
     L1.MISS_RATE = double(L1.NUM_READ_MISS + L1.NUM_WRITE_MISS)/double(L1.NUM_READ + L1.NUM_WRITE );
@@ -196,46 +144,33 @@ void CACHE::output() {
     L1.HIT_TIME = 0.25 + 2.5*L1.SIZE/(512*1024) + 0.025*BLOCKSIZE/16 + 0.025*L1.ASSOC;
     L1.ACCESS_TIME = L1.HIT_TIME + L1.MISS_RATE*L1.MISS_PENALTY;
 
-
     printf("====== Simulation results (raw) ======\n");
     printf("a. number of L1 reads:                %d\n", L1.NUM_READ);
     printf("b. number of L1 read misses:          %d\n", L1.NUM_READ_MISS);
-    printf("c. number of L1 writes:\t\t     %d\n", L1.NUM_WRITE);
+    printf("c. number of L1 writes:\t\t     %d\n",       L1.NUM_WRITE);
     printf("d. number of L1 write misses:         %d\n", L1.NUM_WRITE_MISS);
     printf("e. L1 miss rate:                      %.4f\n", L1.MISS_RATE);
     printf("f. number of swaps:                   %d\n", Victim.NUM_SWAP);
     printf("g. number of victim cache writeback:  %d\n", Victim.NUM_WRITEBACK);
 
-    //L2 cache calculation
-    L2.MISS_RATE = ( (double)( (int)L2.NUM_READ_MISS )/(double)( (int)L2.NUM_READ ) );
-    L2.MISS_PENALTY = (20 + 0.5*( ((double)BLOCKSIZE/16) ) );
-
-
-
-    L2.HIT_TIME = ( 2.5 + 2.5*( (double)L2.SIZE/(512*1024) ) + 0.025*( (double)BLOCKSIZE/16 ) + 0.025*( (double)L2.ASSOC ) );
+    //L2 calculation
+    L2.MISS_RATE = (double)L2.NUM_READ_MISS/(double)L2.NUM_READ;
+    L2.MISS_PENALTY = 20 + 0.5*BLOCKSIZE/16;
+    L2.HIT_TIME = 2.5 + 2.5*L2.SIZE/(512*1024) + 0.025*BLOCKSIZE/16 + 0.025*L2.ASSOC;
+    L2.ACCESS_TIME = L1.HIT_TIME + L1.MISS_RATE*( L2.HIT_TIME + L2.MISS_RATE*L2.MISS_PENALTY );
 
     printf("h. number of L2 reads:                %d\n", L2.NUM_READ);
     printf("i. number of L2 read misses:          %d\n", L2.NUM_READ_MISS);
     printf("j. number of L2 writes:               %d\n", L2.NUM_WRITE);
     printf("k. number of L2 write misses:         %d\n", L2.NUM_WRITE_MISS);
-    printf("l. L2 miss rate:                      ");
-    printf(L2.SIZE?"%.4f\n":"0\n",L2.MISS_RATE);
-    /*if( L2.SIZE == 0 )
-        printf("%-38s%c\n", "l. L2 miss rate:", '0');
+    if( L2.SIZE )
+        printf("l. L2 miss rate:                      %.4f\n", L2.MISS_RATE);
     else
-        printf("%-38s%-2.4f\n", "l. L2 miss rate:", L2.MISS_RATE);*/
-
+        printf("l. L2 miss rate:                      0\n");
     printf("m. number of L2 writebacks:           %d\n", L2.NUM_WRITEBACK);
     printf("n. total memory traffic:              %d\n", L2.SIZE? L2.NUM_ACCESS:L1.NUM_ACCESS);
-
-
-    if(L2.SIZE != 0)
-    {
-        L2.ACCESS_TIME = ( L1.HIT_TIME + ( L1.MISS_RATE*( L2.HIT_TIME + ( L2.MISS_RATE*L2.MISS_PENALTY ) ) ) );
-    }
-
     printf("==== Simulation results (performance) ====\n");
-    printf("1. average access time:%15.4f ns\n", L2.SIZE ? L2.ACCESS_TIME : L1.ACCESS_TIME);
+    printf("1. average access time:         %.4f ns\n", L2.SIZE ? L2.ACCESS_TIME : L1.ACCESS_TIME);
 }
 
 void CACHE::extractAddressParams(unsigned int address, Cache cache_ds, unsigned int* INDEX, unsigned int* TAG_ADD)
@@ -322,7 +257,7 @@ void CACHE::readFromAddress(Cache &cache_ds, unsigned int address, unsigned int 
         cache_ds.TAGS[TAG_LOC] = TAG_ADD;
         cache_ds.DIRTY[TAG_LOC] = 0;
         LRUForMiss(cache_ds, INDEX, &TMP_LOC);
-        cache_ds.LRU[TAG_LOC] = 0;
+        cache_ds.LRUC[TAG_LOC] = 0;
         return;
     }
 
@@ -332,7 +267,7 @@ void CACHE::readFromAddress(Cache &cache_ds, unsigned int address, unsigned int 
     {
 
         LRUForMiss(cache_ds, INDEX, &TAG_LOC);
-        cache_ds.LRU[TAG_LOC] = 0;
+        cache_ds.LRUC[TAG_LOC] = 0;
 
         readFromVictim(cache_ds, address, TAG_LOC, 'r');
 
@@ -343,7 +278,7 @@ void CACHE::readFromAddress(Cache &cache_ds, unsigned int address, unsigned int 
 
     cache_ds.NUM_ACCESS += 1;		//increase the memory traffic counter
     LRUForMiss(cache_ds, INDEX, &TAG_LOC);
-    cache_ds.LRU[TAG_LOC] = 0;
+    cache_ds.LRUC[TAG_LOC] = 0;
 
 
     if( (int)cache_ds.DIRTY[TAG_LOC] == 1 )
@@ -377,7 +312,7 @@ void CACHE::readFromAddress(Cache &cache_ds, unsigned int address, unsigned int 
 void CACHE::readFromVictim(Cache &cache_ds, unsigned int address, unsigned int tagLocationCache, char rw)
 {
     int noOfBlockBits = 0, noOfIndexBitsCache = 0, i=0;
-    unsigned int TAG_ADD = 0, INDEX = 0, TAG_LOC = 0;
+    unsigned int TAG_ADD = 0, INDEX = 0;// TAG_LOC = 0;
     unsigned int tagAddressOfCache, TMP_TAG, constructedAddress = 0;
 
     noOfBlockBits = (int)log2(BLOCKSIZE);
@@ -412,24 +347,22 @@ void CACHE::readFromVictim(Cache &cache_ds, unsigned int address, unsigned int t
 
     //It's a Cache Miss
     if( rw == 'r' )
-        cache_ds.NUM_READ_MISS += 1;
+        cache_ds.NUM_READ_MISS ++;
     else
-        cache_ds.NUM_WRITE_MISS += 1;
+        cache_ds.NUM_WRITE_MISS ++;
 
-    //printf("\nMISS VICTIM CACHE");
-
-    cache_ds.NUM_ACCESS += 1;
+    cache_ds.NUM_ACCESS ++;
 
 
-    LRUForMissVC(&TAG_LOC);
+    LRUForMissVC();
 
-    if( (int)Victim.DIRTY[TAG_LOC] == 1)
+    if( (int)Victim.DIRTY[Victim.TAG_LOC] == 1)
     {
         //printf("\nVICTIM CACHE WRITE BACK");
 
         if( cache_ds.nextLevel!=NULL )
         {
-            constructedAddress = Victim.TAGS[TAG_LOC]<<noOfBlockBits;
+            constructedAddress = Victim.TAGS[Victim.TAG_LOC]<<noOfBlockBits;
             writeToAddress(*cache_ds.nextLevel, constructedAddress, 0);
 
         }
@@ -444,18 +377,14 @@ void CACHE::readFromVictim(Cache &cache_ds, unsigned int address, unsigned int t
     }
 
     TMP_TAG = cache_ds.TAGS[tagLocationCache];
-    Victim.TAGS[TAG_LOC] = ( (TMP_TAG<<noOfIndexBitsCache)|(INDEX%cache_ds.SET) );
+    Victim.TAGS[Victim.TAG_LOC] = ( (TMP_TAG<<noOfIndexBitsCache)|(INDEX%cache_ds.SET) );
 
     TMP_TAG =  cache_ds.DIRTY[tagLocationCache];
-    Victim.DIRTY[TAG_LOC] = TMP_TAG;
+    Victim.DIRTY[Victim.TAG_LOC] = TMP_TAG;
 
-    Victim.VALID[TAG_LOC] = 1;
+    Victim.VALID[Victim.TAG_LOC] = 1;
     cache_ds.TAGS[tagLocationCache] = tagAddressOfCache;
-
-    if( rw == 'r' )
-        cache_ds.DIRTY[tagLocationCache] = 0;
-    else
-        cache_ds.DIRTY[tagLocationCache] = 1;
+    cache_ds.DIRTY[tagLocationCache] = rw-'r'?1:0;
 }
 
 
@@ -520,7 +449,7 @@ void CACHE::writeToAddress(Cache &cache_ds, unsigned int address, unsigned int v
         cache_ds.DIRTY[TAG_LOC] = 1;
 
         LRUForMiss(cache_ds, INDEX, &TMP_LOC);
-        cache_ds.LRU[TAG_LOC] = 0;
+        cache_ds.LRUC[TAG_LOC] = 0;
         return;
     }
 
@@ -528,7 +457,7 @@ void CACHE::writeToAddress(Cache &cache_ds, unsigned int address, unsigned int v
     if( vc_size != 0 )
     {
         LRUForMiss(cache_ds, INDEX, &TAG_LOC);
-        cache_ds.LRU[TAG_LOC] = 0;
+        cache_ds.LRUC[TAG_LOC] = 0;
 
         readFromVictim(cache_ds, address, TAG_LOC, 'w');
 
@@ -539,7 +468,7 @@ void CACHE::writeToAddress(Cache &cache_ds, unsigned int address, unsigned int v
 
     cache_ds.NUM_ACCESS += 1;		//increase the memory traffic counter
     LRUForMiss(cache_ds, INDEX, &TAG_LOC);
-    cache_ds.LRU[TAG_LOC] = 0;
+    cache_ds.LRUC[TAG_LOC] = 0;
 
     if( (int)cache_ds.DIRTY[TAG_LOC] == 1 )
     {
@@ -576,13 +505,13 @@ void CACHE::LRUForHit(Cache &l1Cache, unsigned int INDEX, unsigned int TAG_LOC)
 
     for( i=0; i< (int)l1Cache.ASSOC; i++)
     {
-        if( l1Cache.LRU[INDEX + (i*l1Cache.SET)] < l1Cache.LRU[TAG_LOC] )
+        if( l1Cache.LRUC[INDEX + (i*l1Cache.SET)] < l1Cache.LRUC[TAG_LOC] )
         {
-            l1Cache.LRU[INDEX + (i*l1Cache.SET)] = (l1Cache.LRU[INDEX + (i*l1Cache.SET)]) + 1;
+            l1Cache.LRUC[INDEX + (i*l1Cache.SET)] = (l1Cache.LRUC[INDEX + (i*l1Cache.SET)]) + 1;
         }
     }
 
-    l1Cache.LRU[TAG_LOC] = 0;
+    l1Cache.LRUC[TAG_LOC] = 0;
 }
 
 
@@ -595,9 +524,9 @@ void CACHE::LRUForMiss(Cache &l1Cache, unsigned int INDEX, unsigned int* TAG_LOC
     //printf("\nL1 UPDATE LRU");
     for( i=0; i<l1Cache.ASSOC; i++)
     {
-        if( l1Cache.LRU[INDEX + (i*l1Cache.SET)] > max )
+        if( l1Cache.LRUC[INDEX + (i*l1Cache.SET)] > max )
         {
-            max = l1Cache.LRU[INDEX + (i*l1Cache.SET)];
+            max = l1Cache.LRUC[INDEX + (i*l1Cache.SET)];
             *TAG_LOC = ( INDEX + (i*l1Cache.SET) );
         }
     }
@@ -605,51 +534,29 @@ void CACHE::LRUForMiss(Cache &l1Cache, unsigned int INDEX, unsigned int* TAG_LOC
 
     for( i=0; i<l1Cache.ASSOC; i++)
     {
-        l1Cache.LRU[INDEX + (i*l1Cache.SET)] = (l1Cache.LRU[INDEX + (i*l1Cache.SET)]) + 1;
+        l1Cache.LRUC[INDEX + (i*l1Cache.SET)] = (l1Cache.LRUC[INDEX + (i*l1Cache.SET)]) + 1;
     }
 }
 
 
 
 
-void CACHE::LRUForHitVC(unsigned int INDEX)
-{
-    int i = 0;
-
-    for( i=0; i< (int)Victim.ASSOC; i++)
-    {
-        if( Victim.LRU[i] < Victim.LRU[INDEX] )
-        {
-            Victim.LRU[i] = (Victim.LRU[i] + 1);
-        }
-    }
-
-    Victim.LRU[INDEX] = 0;
+void CACHE::LRUForHitVC(int index) {
+    for(unsigned int i=0; i<Victim.ASSOC; i++)
+        if( Victim.LRUC[i] < Victim.LRUC[index] )
+            Victim.LRUC[i] = (Victim.LRUC[i] + 1);
+    Victim.LRUC[index] = 0;
 }
 
-
-
-void CACHE::LRUForMissVC(unsigned int* TAG_LOC)
-{
-    unsigned int i = 0;
-    int max = 0;
-    *TAG_LOC = 0;
-
-    for( i=0; i<Victim.ASSOC; i++)
-    {
-        if( Victim.LRU[i] > max )
-        {
-            max = Victim.LRU[i];
-            *TAG_LOC = i;
+void CACHE::LRUForMissVC() {
+    unsigned int max = 0, i;
+    Victim.TAG_LOC = 0;
+    for(i=0; i<Victim.ASSOC; i++)
+        if( Victim.LRUC[i] > max ) {
+            max = Victim.LRUC[i];
+            Victim.TAG_LOC = i;
         }
-    }
-
-
-    for( i=0; i<Victim.ASSOC; i++)
-    {
-        Victim.LRU[i] = (Victim.LRU[i] + 1);
-    }
-
-    Victim.LRU[*TAG_LOC] = 0;
-
+    for(i=0; i<Victim.ASSOC; i++)
+        Victim.LRUC[i] = (Victim.LRUC[i] + 1);
+    Victim.LRUC[Victim.TAG_LOC] = 0;
 }

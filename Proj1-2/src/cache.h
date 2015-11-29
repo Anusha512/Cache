@@ -9,7 +9,8 @@ private:
 
 public:
     //unsigned int SET,TAG,INDEX,TAG_LOC, TAG_ADD;
-    unsigned int *TAGS, *DIRTY, *VALID, *LRU;
+    unsigned int TAG_LOC, INDEX;
+    unsigned int *LRUC, *TAGS, *DIRTY, *VALID;
     int *NUM_TAG, *NUM_SET;
 
     unsigned int c_numOfSets;
@@ -48,8 +49,8 @@ public:
     void LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocation);
     void LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLocation);
 
-    void LRUForHitVC(unsigned int indexLocation);
-    void LRUForMissVC(unsigned int* tagLocation);
+    void LRUForHitVC(int index);
+    void LRUForMissVC();
 
 };
 
