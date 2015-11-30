@@ -32,9 +32,8 @@ public:
 class CACHE {
 private:
     Cache L1,L2,Victim;
-    unsigned int BLOCKSIZE;
+    unsigned int BLOCKSIZE, LRU_KEY, TAG_KEY, DIR_KEY;
     char *TRACE_FILE;
-    unsigned int key, tagKey, dirtyKey;
 
 public:
     //unsigned int TAG_LOC, TAG_ADD, INDEX;

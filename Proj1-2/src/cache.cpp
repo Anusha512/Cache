@@ -70,17 +70,14 @@ void CACHE::output() {
     printf("===================================\n");
     printf("===== L1 contents =====\n");
 
-    for( i=0; i<L1.SET; i++)
-    {
-        //sort L1 cache based on LRU counter
-        for( j=1; j<L1.ASSOC; j++)
-        {
-            key = L1.LRU[i + (j*L1.SET)];
-            tagKey = L1.TAGS[i + (j*L1.SET)];
-            dirtyKey = L1.DIRTY[i + (j*L1.SET)];
+    for(i=0; i<L1.SET; i++) {
+        for(j=1; j<L1.ASSOC; j++) {
+            LRU_KEY = L1.LRU[i + (j*L1.SET)];
+            TAG_KEY = L1.TAGS[i + (j*L1.SET)];
+            DIR_KEY = L1.DIRTY[i + (j*L1.SET)];
             k = j-1;
 
-            while( (k>=0) && ( key < ( L1.LRU[i + (k*L1.SET)] ) ) )
+            while( (k>=0) && ( LRU_KEY < ( L1.LRU[i + (k*L1.SET)] ) ) )
             {
                 L1.LRU[i + ((k+1)*L1.SET)] = L1.LRU[i + (k*L1.SET)];
                 L1.TAGS[i + ((k+1)*L1.SET)] = L1.TAGS[i + (k*L1.SET)];
@@ -89,21 +86,20 @@ void CACHE::output() {
                 k = k-1;
             }
 
-            L1.LRU[i + ((k+1)*L1.SET)] = key;
-            L1.TAGS[i + ((k+1)*L1.SET)] = tagKey;
-            L1.DIRTY[i + ((k+1)*L1.SET)] = dirtyKey;
+            L1.LRU[i + ((k+1)*L1.SET)] = LRU_KEY;
+            L1.TAGS[i + ((k+1)*L1.SET)] = TAG_KEY;
+            L1.DIRTY[i + ((k+1)*L1.SET)] = DIR_KEY;
 
         }
 
         printf("set %d: ", i);
-        for( j=0; j<L1.ASSOC; j++)
-        {
+        for(j=0; j<L1.ASSOC; j++) {
             if( L1.DIRTY[i + (j*L1.SET)] == 1)
                 printf("%x D  ",L1.TAGS[i + (j*L1.SET)]);
             else
                 printf("%x    ",L1.TAGS[i + (j*L1.SET)]);
         }
-        printf("\n");
+        puts("");
     }
 
 
@@ -116,12 +112,12 @@ void CACHE::output() {
         //sort victim cache based on LRU counter
         for( i=1; i<Victim.ASSOC; i++)
         {
-            key = Victim.LRU[i];
-            tagKey = Victim.TAGS[i];
-            dirtyKey = Victim.DIRTY[i];
+            LRU_KEY = Victim.LRU[i];
+            TAG_KEY = Victim.TAGS[i];
+            DIR_KEY = Victim.DIRTY[i];
             j = i-1;
 
-            while( ((j>=0) && (key<Victim.LRU[j]) ))
+            while( ((j>=0) && (LRU_KEY<Victim.LRU[j]) ))
             {
                 Victim.LRU[j+1] = Victim.LRU[j];
                 Victim.TAGS[j+1] = Victim.TAGS[j];
@@ -130,9 +126,9 @@ void CACHE::output() {
                 j = j-1;
             }
 
-            Victim.LRU[j+1] = key;
-            Victim.TAGS[j+1] = tagKey;
-            Victim.DIRTY[j+1] = dirtyKey;
+            Victim.LRU[j+1] = LRU_KEY;
+            Victim.TAGS[j+1] = TAG_KEY;
+            Victim.DIRTY[j+1] = DIR_KEY;
         }
 
 
@@ -160,12 +156,12 @@ void CACHE::output() {
             //sort L2 cache based on LRU counter
             for( j=1; j<L2.ASSOC; j++)
             {
-                key = L2.LRU[i + (j*L2.SET)];
-                tagKey = L2.TAGS[i + (j*L2.SET)];
-                dirtyKey = L2.DIRTY[i + (j*L2.SET)];
+                LRU_KEY = L2.LRU[i + (j*L2.SET)];
+                TAG_KEY = L2.TAGS[i + (j*L2.SET)];
+                DIR_KEY = L2.DIRTY[i + (j*L2.SET)];
                 k = j-1;
 
-                while( (k>=0) && ( key < ( L2.LRU[i + (k*L2.SET)] ) ) )
+                while( (k>=0) && ( LRU_KEY < ( L2.LRU[i + (k*L2.SET)] ) ) )
                 {
                     L2.LRU[i + ((k+1)*L2.SET)] = L2.LRU[i + (k*L2.SET)];
                     L2.TAGS[i + ((k+1)*L2.SET)] = L2.TAGS[i + (k*L2.SET)];
@@ -174,9 +170,9 @@ void CACHE::output() {
                     k = k-1;
                 }
 
-                L2.LRU[i + ((k+1)*L2.SET)] = key;
-                L2.TAGS[i + ((k+1)*L2.SET)] = tagKey;
-                L2.DIRTY[i + ((k+1)*L2.SET)] = dirtyKey;
+                L2.LRU[i + ((k+1)*L2.SET)] = LRU_KEY;
+                L2.TAGS[i + ((k+1)*L2.SET)] = TAG_KEY;
+                L2.DIRTY[i + ((k+1)*L2.SET)] = DIR_KEY;
 
             }
 
@@ -229,12 +225,8 @@ void CACHE::output() {
     else
         printf("%-38s%-2.4f\n", "l. L2 miss rate:", L2.MISS_RATE);*/
 
-    printf("%-38s%d\n", "m. number of L2 writebacks:", L2.NUM_WRITEBACK);
-
-    if(L2.SIZE == 0)
-        printf("%-38s%d\n", "n. total memory traffic:", L1.NUM_ACCESS);
-    else
-        printf("%-38s%d\n", "n. total memory traffic:", L2.NUM_ACCESS);
+    printf("m. number of L2 writebacks:           %d\n", L2.NUM_WRITEBACK);
+    printf("n. total memory traffic:              %d\n", L2.SIZE? L2.NUM_ACCESS:L1.NUM_ACCESS);
 
 
     if(L2.SIZE != 0)
