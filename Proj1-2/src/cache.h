@@ -11,20 +11,13 @@ public:
     //unsigned int SET,TAG,INDEX,TAG_LOC, TAG_ADD;
     unsigned int TAG_LOC, INDEX;
     unsigned int *LRUC, *TAGS, *DIRTY, *VALID;
-    int *NUM_TAG, *NUM_SET;
-
-    unsigned int c_numOfSets;
-
-
-    unsigned int* LRUCounter;
-    //unsigned int memoryAccessCounter;
 
 
     Cache *nextLevel;
 
     void init(unsigned int size, unsigned int assoc, unsigned int set, unsigned int tag);
-
-
+    void Hit(int index);
+    void Miss();
 
     friend class CACHE;
 
@@ -37,7 +30,6 @@ private:
     char *TRACE_FILE;
 
 public:
-    //unsigned int TAG_LOC, TAG_ADD, INDEX;
     void init(unsigned int block, unsigned int size1, unsigned int assoc1, unsigned int sizev, unsigned int size2, unsigned int assoc2, char *trace);
     void input();
     void output();
@@ -46,11 +38,9 @@ public:
     void readFromAddress(Cache &cache_ds, unsigned int address, unsigned int vc_size);
     void writeToAddress(Cache &cache_ds, unsigned int address, unsigned int vc_size);
     void readFromVictim(Cache &cache_ds, unsigned int address, unsigned int tagLocationCache, char rw);
-    void LRUForHit(Cache &l1Cache, unsigned int indexLocation, unsigned int tagLocation);
-    void LRUForMiss(Cache &l1Cache, unsigned int indexLocation, unsigned int* tagLocation);
 
-    void LRUForHitVC(int index);
-    void LRUForMissVC();
+
+
 
 };
 
