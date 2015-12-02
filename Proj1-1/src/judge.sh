@@ -42,8 +42,7 @@ function run()
     fi
 }
 
-make clean
-make
+make clean && make
 
 mkdir -p ../results
 

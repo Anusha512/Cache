@@ -98,9 +98,9 @@ void CACHE::output() {
     printf("===================================\n");
     
     printf("===== L1 contents =====\n");  //Part L1
-    for(i=0; i<L1.SET; i++) {
+    for(i=0; i<(int)L1.SET; i++) {
         //sort L1
-        for(j=1; j<L1.ASSOC; j++) {
+        for(j=1; j<(int)L1.ASSOC; j++) {
             LRU_KEY = L1.LRUC[i+(j*L1.SET)];
             TAG_KEY = L1.TAGS[i+(j*L1.SET)];
             DIR_KEY = L1.DIRTY[i+(j*L1.SET)];
@@ -114,7 +114,7 @@ void CACHE::output() {
             L1.DIRTY[i+((k+1)*L1.SET)] = DIR_KEY;
         }
         printf("set %d: ", i);
-        for(j=0; j<L1.ASSOC; j++)
+        for(j=0; j<(int)L1.ASSOC; j++)
             printf("%x %c  ",L1.TAGS[i+(j*L1.SET)], L1.DIRTY[i+(j*L1.SET)]?'D':' ');
         puts("");
     }
@@ -123,7 +123,7 @@ void CACHE::output() {
         printf("===== Victim Cache contents =====\n");
         printf("set 0: ");
         //sort Victim
-        for( i=1; i<Victim.ASSOC; i++) {
+        for(i=1; i<(int)Victim.ASSOC; i++) {
             LRU_KEY = Victim.LRUC[i];
             TAG_KEY = Victim.TAGS[i];
             DIR_KEY = Victim.DIRTY[i];
@@ -136,16 +136,16 @@ void CACHE::output() {
             Victim.TAGS[j+1] = TAG_KEY;
             Victim.DIRTY[j+1] = DIR_KEY;
         }
-        for(i=0; i<Victim.ASSOC; i++)
+        for(i=0; i<(int)Victim.ASSOC; i++)
             printf("%x %c  ",Victim.TAGS[i], Victim.DIRTY[i]?'D':' ');
         puts("");
     }
 
     if( L2.SIZE ) {  //Part L2
         printf("===== L2 contents =====\n");
-        for( i=0; i<L2.SET; i++) {
+        for(i=0; i<(int)L2.SET; i++) {
             //sort L2
-            for( j=1; j<L2.ASSOC; j++) {
+            for(j=1; j<(int)L2.ASSOC; j++) {
                 LRU_KEY = L2.LRUC[i+(j*L2.SET)];
                 TAG_KEY = L2.TAGS[i+(j*L2.SET)];
                 DIR_KEY = L2.DIRTY[i+(j*L2.SET)];
@@ -160,7 +160,7 @@ void CACHE::output() {
 
             }
             printf("set %d: ", i);
-            for(j=0; j<L2.ASSOC; j++)
+            for(j=0; j<(int)L2.ASSOC; j++)
                 printf("%x %c  ",L2.TAGS[i+(j*L2.SET)], L2.DIRTY[i+(j*L2.SET)]?'D':' ');
             puts("");
         }
