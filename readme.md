@@ -12,6 +12,26 @@ and run `make clean && make` again.
 
 #Validation
 
+##In Proj1-1
+```
+./sim_cache  16 16384 1 0 0 		gcc_trace.txt  > DebugRun1.txt
+diff 	DebugRun1.txt 	ValidationRun1.txt
+    
+./sim_cache 128  2048 8 0 1 		go_trace.txt   > DebugRun2.txt
+diff 	DebugRun2.txt 	ValidationRun2.txt
+    
+./sim_cache  32  4096 4 0 1 		perl_trace.txt > DebugRun3.txt
+diff 	DebugRun3.txt 	ValidationRun3.txt
+    
+./sim_cache  64  8192 2 1 0 		gcc_trace.txt  > DebugRun4.txt
+diff 	DebugRun4.txt 	ValidationRun4.txt
+    
+./sim_cache  32  1024 4 1 1 		go_trace.txt   > DebugRun5.txt
+diff 	DebugRun5.txt 	ValidationRun5.txt
+    
+```
+
+##In Proj1-2
 ```
 ./sim_cache 32 2048 4 0 4096 8		gcc_trace.txt  > DebugRun6.txt
 diff 	DebugRun6.txt  	Validation6_PartB.txt
